@@ -29,6 +29,7 @@
 	<properties>
 		<java.version>21</java.version>
 	</properties>
+	<!-- spring-dotenv 4.0.0 predates Spring Boot 4 and registers but never fires under it; 5.1.0's springboot4-dotenv is the variant built for Boot 4 -->
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
@@ -52,6 +53,11 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc</artifactId>
+		</dependency>
+		<!-- webmvc doesn't pull Jackson in transitively the way spring-boot-starter-web used to -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-jackson</artifactId>
 		</dependency>
 
 		<dependency>
@@ -79,6 +85,8 @@
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- must NOT be optional=true: spring-boot-maven-plugin drops optional deps from the repackaged jar,
+		     which silently kills .env loading at runtime with no error -->
 		<dependency>
 			<groupId>me.paulschwarz</groupId>
 			<artifactId>springboot4-dotenv</artifactId>
