@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+// Triggers an on-demand pull of NASA's current NEO feed into the database. GET (not POST)
+// purely for manual/browser-triggered convenience during early development.
 @RestController
 public class IngestController {
 

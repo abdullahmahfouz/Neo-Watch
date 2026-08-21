@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+// Coordinates fetching the current NEO feed from NASA (NasaClient) and persisting it
+// (AsteroidRepository); kept thin on purpose so NasaClient stays a pure API client.
 @Service
 public class AsteroidService {
 

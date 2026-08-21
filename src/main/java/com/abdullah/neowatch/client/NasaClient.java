@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+// Thin wrapper around NASA's NeoWs "feed" endpoint: fetchTodayFeed() returns the raw JSON,
+// fetchTodayAsteroids() parses it into Asteroid entities ready for persistence.
 @Component
 public class NasaClient {
 
