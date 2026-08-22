@@ -8,6 +8,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+// Spring Data JPA repository for CloseApproach rows, used by AsteroidService to look up and
+// dedup approaches during ingest and to serve NeoController's history endpoint.
 public interface CloseApproachRepository extends JpaRepository<CloseApproach, Long> {
     // Derived query: Spring Data builds "where asteroid_id = ?" from the method name
     List<CloseApproach> findByAsteroidId(Long asteroidId);

@@ -9,6 +9,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+// Spring Data JPA repository for Asteroid rows: the findAll/save/etc. CRUD methods come free
+// from JpaRepository, and the three methods below are added for AsteroidService's lookups.
 public interface AsteroidRepository extends JpaRepository<Asteroid, Long> {
     // Used by AsteroidService to check "have we already saved this asteroid?" before inserting,
     // so re-running /ingest updates the existing row instead of creating a duplicate
