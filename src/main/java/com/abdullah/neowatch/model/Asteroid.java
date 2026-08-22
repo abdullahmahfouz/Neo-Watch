@@ -3,14 +3,16 @@ package com.abdullah.neowatch.model;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 // Persisted row for one near-earth object ingested from NASA's feed. @Data (Lombok) generates
-// getters/setters/equals/hashCode/toString at compile time.
+// getters/setters/equals/hashCode/toString at compile time. Implements Serializable because
+// Spring's Redis cache (see AsteroidService) stores cached values via Java serialization.
 @Entity
 @Data
-public class Asteroid {
+public class Asteroid implements Serializable {
     // Local surrogate key, distinct from NASA's own id (nasaId below)
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -7,6 +7,8 @@ import com.abdullah.neowatch.model.RiskSnapshot;
 import com.abdullah.neowatch.repository.AsteroidRepository;
 import com.abdullah.neowatch.repository.CloseApproachRepository;
 import com.abdullah.neowatch.repository.RiskSnapshotRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,9 +40,13 @@ public class AsteroidService {
     }
 
     // Runs automatically every day at midnight (cron: sec min hour day month weekday), in the
-    // server's default timezone, so the data stays fresh without anyone hitting /ingest by hand
+    // server's default timezone, so the data stays fresh without anyone hitting /ingest by hand.
+    // Clears every read cache below, since this is the only method that ever changes the data —
+    // otherwise a cached response could keep serving pre-ingest values after new data lands.
     @Scheduled(cron = "0 0 0 * * *")
     @Transactional
+    @CacheEvict(value = {"hazardousAsteroids", "upcomingAsteroids", "approachHistory", "riskScore", "riskHistory"},
+            allEntries = true)
     public List<Asteroid> ingestTodayAsteroids() {
         List<Asteroid> fetchedAsteroids = nasaClient.fetchTodayAsteroids();
 
@@ -95,15 +101,18 @@ public class AsteroidService {
         riskSnapshotRepository.save(snapshot);
     }
 
+    @Cacheable("hazardousAsteroids")
     public List<Asteroid> getHazardousAsteroids() {
         return asteroidRepository.findByIsPotentiallyHazardousTrue();
     }
 
+    @Cacheable("upcomingAsteroids")
     public List<Asteroid> getUpcomingAsteroids() {
         LocalDate today = LocalDate.now();
         return asteroidRepository.findWithApproachBetween(today, today.plusDays(7));
     }
 
+    @Cacheable(value = "approachHistory", key = "#asteroidId")
     public List<CloseApproach> getApproachHistory(Long asteroidId) {
         return closeApproachRepository.findByAsteroidId(asteroidId);
     }
@@ -118,6 +127,7 @@ public class AsteroidService {
 
     // Reports the single riskiest approach on record for this asteroid, since one asteroid can
     // have many recorded approaches with very different distances/speeds
+    @Cacheable(value = "riskScore", key = "#asteroidId")
     public double getRiskScore(Long asteroidId) {
         Asteroid asteroid = asteroidRepository.findById(asteroidId)
                 .orElseThrow(() -> new NoSuchElementException("Asteroid not found: " + asteroidId));
@@ -131,6 +141,7 @@ public class AsteroidService {
 
     // Oldest-to-newest risk scores recorded for this asteroid across every past ingest —
     // the trend line, as opposed to getRiskScore()'s single live "riskiest approach right now"
+    @Cacheable(value = "riskHistory", key = "#asteroidId")
     public List<RiskSnapshot> getRiskHistory(Long asteroidId) {
         return riskSnapshotRepository.findByAsteroidIdOrderByCalculatedAtAsc(asteroidId);
     }
