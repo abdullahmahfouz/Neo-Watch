@@ -7,6 +7,7 @@ com/abdullah/neowatch/service/AsteroidService.class
 com/abdullah/neowatch/controller/NeoController.class
 com/abdullah/neowatch/model/RiskSnapshot.class
 com/abdullah/neowatch/model/Asteroid.class
+com/abdullah/neowatch/config/WebConfig.class
 com/abdullah/neowatch/repository/CloseApproachRepository.class
 com/abdullah/neowatch/controller/TestController.class
 com/abdullah/neowatch/client/NasaClient.class

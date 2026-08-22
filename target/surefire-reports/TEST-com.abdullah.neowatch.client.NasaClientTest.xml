@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.abdullah.neowatch.service.AsteroidServiceTest" time="0.24" tests="11" errors="0" skipped="0" failures="0" flakes="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.abdullah.neowatch.client.NasaClientTest" time="0.017" tests="3" errors="0" skipped="0" failures="0" flakes="0">
   <properties>
     <property name="java.specification.version" value="25"/>
     <property name="sun.jnu.encoding" value="UTF-8"/>
@@ -67,15 +67,7 @@
     <property name="java.class.version" value="69.0"/>
     <property name="LOGGED_APPLICATION_NAME" value="[neowatch] "/>
   </properties>
-  <testcase name="ingestUpdatesExistingAsteroidInsteadOfInsertingADuplicate" classname="com.abdullah.neowatch.service.AsteroidServiceTest" time="0.215"/>
-  <testcase name="ingestUpdatesExistingApproachInsteadOfInsertingADuplicate" classname="com.abdullah.neowatch.service.AsteroidServiceTest" time="0.005"/>
-  <testcase name="getRiskHistoryDelegatesToTheRepository" classname="com.abdullah.neowatch.service.AsteroidServiceTest" time="0.002"/>
-  <testcase name="ingestInsertsNewAsteroidAndRecordsARiskSnapshot" classname="com.abdullah.neowatch.service.AsteroidServiceTest" time="0.004"/>
-  <testcase name="getUpcomingAsteroidsQueriesASevenDayWindowFromToday" classname="com.abdullah.neowatch.service.AsteroidServiceTest" time="0.001"/>
-  <testcase name="getHazardousAsteroidsDelegatesToTheRepository" classname="com.abdullah.neowatch.service.AsteroidServiceTest" time="0.002"/>
-  <testcase name="closerAndFasterMeansHigherRisk" classname="com.abdullah.neowatch.service.AsteroidServiceTest" time="0.001"/>
-  <testcase name="matchesTheStatedFormula" classname="com.abdullah.neowatch.service.AsteroidServiceTest" time="0.001"/>
-  <testcase name="getRiskScoreReturnsTheRiskiestOfMultipleApproaches" classname="com.abdullah.neowatch.service.AsteroidServiceTest" time="0.003"/>
-  <testcase name="getRiskScoreThrowsWhenTheAsteroidDoesNotExist" classname="com.abdullah.neowatch.service.AsteroidServiceTest" time="0.002"/>
-  <testcase name="getApproachHistoryDelegatesToTheRepository" classname="com.abdullah.neowatch.service.AsteroidServiceTest" time="0.001"/>
+  <testcase name="missingFieldsDefaultInsteadOfThrowing" classname="com.abdullah.neowatch.client.NasaClientTest" time="0.008"/>
+  <testcase name="flattensAsteroidsAcrossMultipleDatesAndMultipleApproaches" classname="com.abdullah.neowatch.client.NasaClientTest" time="0.005"/>
+  <testcase name="parsesOneAsteroidWithOneCloseApproach" classname="com.abdullah.neowatch.client.NasaClientTest" time="0.002"/>
 </testsuite>

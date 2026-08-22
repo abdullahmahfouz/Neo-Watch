@@ -1,5 +1,6 @@
 /Users/Abdullah/Neo-Watch/src/main/java/com/abdullah/neowatch/NeowatchApplication.java
 /Users/Abdullah/Neo-Watch/src/main/java/com/abdullah/neowatch/client/NasaClient.java
+/Users/Abdullah/Neo-Watch/src/main/java/com/abdullah/neowatch/config/WebConfig.java
 /Users/Abdullah/Neo-Watch/src/main/java/com/abdullah/neowatch/controller/IngestController.java
 /Users/Abdullah/Neo-Watch/src/main/java/com/abdullah/neowatch/controller/NeoController.java
 /Users/Abdullah/Neo-Watch/src/main/java/com/abdullah/neowatch/controller/TestController.java
