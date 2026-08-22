@@ -7,8 +7,13 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface AsteroidRepository extends JpaRepository<Asteroid, Long> {
+    // Used by AsteroidService to check "have we already saved this asteroid?" before inserting,
+    // so re-running /ingest updates the existing row instead of creating a duplicate
+    Optional<Asteroid> findByNasaId(String nasaId);
+
     // Derived query: Spring Data reads the method name and builds
     // "where is_potentially_hazardous = true" from it, no @Query needed
     List<Asteroid> findByIsPotentiallyHazardousTrue();

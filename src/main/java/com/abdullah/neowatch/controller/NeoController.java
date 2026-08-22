@@ -2,6 +2,7 @@ package com.abdullah.neowatch.controller;
 
 import com.abdullah.neowatch.model.Asteroid;
 import com.abdullah.neowatch.model.CloseApproach;
+import com.abdullah.neowatch.model.RiskSnapshot;
 import com.abdullah.neowatch.service.AsteroidService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,5 +36,15 @@ public class NeoController {
     @GetMapping("/{id}/history")
     public List<CloseApproach> history(@PathVariable Long id) {
         return asteroidService.getApproachHistory(id);
+    }
+
+    @GetMapping("/{id}/risk")
+    public double risk(@PathVariable Long id) {
+        return asteroidService.getRiskScore(id);
+    }
+
+    @GetMapping("/{id}/risk-history")
+    public List<RiskSnapshot> riskHistory(@PathVariable Long id) {
+        return asteroidService.getRiskHistory(id);
     }
 }

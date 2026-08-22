@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 // without starting the Spring context — the null repositories/client below are never touched
 class AsteroidServiceTest {
 
-    private final AsteroidService asteroidService = new AsteroidService(null, null, null);
+    private final AsteroidService asteroidService = new AsteroidService(null, null, null, null);
 
     @Test
     void closerAndFasterMeansHigherRisk() {

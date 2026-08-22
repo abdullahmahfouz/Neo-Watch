@@ -1,10 +1,12 @@
 com/abdullah/neowatch/NeowatchApplication.class
 com/abdullah/neowatch/repository/AsteroidRepository.class
-com/abdullah/neowatch/model/Asteroid.class
+com/abdullah/neowatch/repository/RiskSnapshotRepository.class
 com/abdullah/neowatch/controller/IngestController.class
 com/abdullah/neowatch/model/CloseApproach.class
-com/abdullah/neowatch/repository/CloseApproachRepository.class
-com/abdullah/neowatch/controller/TestController.class
 com/abdullah/neowatch/service/AsteroidService.class
 com/abdullah/neowatch/controller/NeoController.class
+com/abdullah/neowatch/model/RiskSnapshot.class
+com/abdullah/neowatch/model/Asteroid.class
+com/abdullah/neowatch/repository/CloseApproachRepository.class
+com/abdullah/neowatch/controller/TestController.class
 com/abdullah/neowatch/client/NasaClient.class
