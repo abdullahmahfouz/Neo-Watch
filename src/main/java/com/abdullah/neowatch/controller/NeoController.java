@@ -1,0 +1,39 @@
+package com.abdullah.neowatch.controller;
+
+import com.abdullah.neowatch.model.Asteroid;
+import com.abdullah.neowatch.model.CloseApproach;
+import com.abdullah.neowatch.service.AsteroidService;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+// Read-only endpoints over already-ingested data. Unlike IngestController, these never call
+// NASA — they only query what's already in the database.
+@RestController
+@RequestMapping("/api/neo")
+public class NeoController {
+
+    private final AsteroidService asteroidService;
+
+    public NeoController(AsteroidService asteroidService) {
+        this.asteroidService = asteroidService;
+    }
+
+    @GetMapping("/upcoming")
+    public List<Asteroid> upcoming() {
+        return asteroidService.getUpcomingAsteroids();
+    }
+
+    @GetMapping("/hazardous")
+    public List<Asteroid> hazardous() {
+        return asteroidService.getHazardousAsteroids();
+    }
+
+    @GetMapping("/{id}/history")
+    public List<CloseApproach> history(@PathVariable Long id) {
+        return asteroidService.getApproachHistory(id);
+    }
+}

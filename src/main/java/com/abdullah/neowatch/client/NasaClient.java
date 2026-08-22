@@ -1,12 +1,14 @@
 package com.abdullah.neowatch.client;
 
 import com.abdullah.neowatch.model.Asteroid;
+import com.abdullah.neowatch.model.CloseApproach;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +50,18 @@ public class NasaClient {
                 asteroid.setEstimatedDiameterMaxKm(diameterKm.path("estimated_diameter_max").asDouble());
 
                 asteroid.setIsPotentiallyHazardous(neo.path("is_potentially_hazardous_asteroid").asBoolean());
+
+                // NASA sends miss_distance/relative_velocity as numeric strings (e.g. "1234.56"),
+                // not JSON numbers — asDouble() parses those strings fine either way
+                for (JsonNode approachNode : neo.path("close_approach_data")) {
+                    CloseApproach closeApproach = new CloseApproach();
+                    closeApproach.setAsteroid(asteroid);
+                    closeApproach.setApproachDate(LocalDate.parse(approachNode.path("close_approach_date").asText()));
+                    closeApproach.setMissDistanceKm(approachNode.path("miss_distance").path("kilometers").asDouble());
+                    closeApproach.setRelativeVelocityKmh(approachNode.path("relative_velocity").path("kilometers_per_hour").asDouble());
+                    closeApproach.setOrbitingBody(approachNode.path("orbiting_body").asText());
+                    asteroid.getCloseApproaches().add(closeApproach);
+                }
 
                 asteroids.add(asteroid);
             }

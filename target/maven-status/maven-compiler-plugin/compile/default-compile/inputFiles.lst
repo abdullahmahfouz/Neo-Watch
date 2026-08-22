@@ -1,5 +1,10 @@
 /Users/Abdullah/Neo-Watch/src/main/java/com/abdullah/neowatch/NeowatchApplication.java
 /Users/Abdullah/Neo-Watch/src/main/java/com/abdullah/neowatch/client/NasaClient.java
+/Users/Abdullah/Neo-Watch/src/main/java/com/abdullah/neowatch/controller/IngestController.java
+/Users/Abdullah/Neo-Watch/src/main/java/com/abdullah/neowatch/controller/NeoController.java
 /Users/Abdullah/Neo-Watch/src/main/java/com/abdullah/neowatch/controller/TestController.java
 /Users/Abdullah/Neo-Watch/src/main/java/com/abdullah/neowatch/model/Asteroid.java
+/Users/Abdullah/Neo-Watch/src/main/java/com/abdullah/neowatch/model/CloseApproach.java
 /Users/Abdullah/Neo-Watch/src/main/java/com/abdullah/neowatch/repository/AsteroidRepository.java
+/Users/Abdullah/Neo-Watch/src/main/java/com/abdullah/neowatch/repository/CloseApproachRepository.java
+/Users/Abdullah/Neo-Watch/src/main/java/com/abdullah/neowatch/service/AsteroidService.java

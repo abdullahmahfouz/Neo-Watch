@@ -3,6 +3,9 @@ package com.abdullah.neowatch.model;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.util.ArrayList;
+import java.util.List;
+
 // Persisted row for one near-earth object ingested from NASA's feed. @Data (Lombok) generates
 // getters/setters/equals/hashCode/toString at compile time.
 @Entity
@@ -20,4 +23,10 @@ public class Asteroid {
     private Double estimatedDiameterMinKm;
     private Double estimatedDiameterMaxKm;
     private Boolean isPotentiallyHazardous;
+
+    // Not a DB column: CloseApproach owns the actual foreign key (see CloseApproach.asteroid).
+    // This just carries the parsed approaches from NasaClient to AsteroidService so both can be
+    // saved together in one ingest call.
+    @Transient
+    private List<CloseApproach> closeApproaches = new ArrayList<>();
 }
