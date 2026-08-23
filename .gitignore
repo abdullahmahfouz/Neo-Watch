@@ -1,6 +1,9 @@
-.target/
+target/
 .env
 .idea/
 *.iml
+.vscode/
 global-bundle.pem
 .gstack/
+.DS_Store
+hs_err_pid*.log
