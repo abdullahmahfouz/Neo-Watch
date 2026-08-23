@@ -7,3 +7,4 @@ global-bundle.pem
 .gstack/
 .DS_Store
 hs_err_pid*.log
+deploy.local.json

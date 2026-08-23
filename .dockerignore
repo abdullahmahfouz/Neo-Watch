@@ -1,0 +1,12 @@
+target/
+frontend/
+.git/
+.gitignore
+.idea/
+*.iml
+.env
+.env.*
+global-bundle.pem
+docs/
+README.md
+HELP.md

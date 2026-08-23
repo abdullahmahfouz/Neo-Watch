@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowCounterClockwise, Bell, FunnelSimple } from '@phosphor-icons/react'
+import {
+  ArrowCounterClockwise,
+  Bell,
+  FunnelSimple,
+  List,
+  X,
+} from '@phosphor-icons/react'
 import { formatAsteroidName, formatRiskScore } from '../../lib/format'
 import { HazardIndicator } from '../HazardIndicator'
 
@@ -38,7 +44,9 @@ export function TopNav({
 }) {
   const now = useClock()
   const [alertsOpen, setAlertsOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const alertsRef = useRef(null)
+  const menuRef = useRef(null)
   const hazardousCount = hazardousRows.length
 
   useEffect(() => {
@@ -52,9 +60,61 @@ export function TopNav({
     return () => document.removeEventListener('pointerdown', handlePointerDown)
   }, [alertsOpen])
 
+  useEffect(() => {
+    if (!menuOpen) return
+    function handlePointerDown(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => document.removeEventListener('pointerdown', handlePointerDown)
+  }, [menuOpen])
+
   return (
     <header className="pointer-events-auto relative flex h-16 items-center justify-between border-b border-[var(--color-line-strong)] bg-[var(--color-panel)]/80 px-4 backdrop-blur-md sm:px-8">
       <div className="flex items-center gap-3">
+        <div className="relative md:hidden" ref={menuRef}>
+          <button
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-label="Menu"
+            aria-expanded={menuOpen}
+            className="text-[var(--color-bone)] transition-colors hover:text-[var(--color-amber)]"
+          >
+            {menuOpen ? <X size={20} /> : <List size={20} />}
+          </button>
+
+          {menuOpen && (
+            // Fixed + a very high z-index rather than absolute+z-50: the
+            // Threats/Telemetry panels below also create their own stacking
+            // contexts (backdrop-blur), and this menu needs to reliably
+            // paint above them regardless of DOM nesting.
+            <nav className="fixed left-4 top-16 z-[100] w-48 border border-[var(--color-line-strong)] bg-[var(--color-panel)]/95 backdrop-blur-md">
+              {TABS.map((tab) => {
+                const active = tab.key === activeView
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => {
+                      onChangeView(tab.key)
+                      setMenuOpen(false)
+                    }}
+                    className={`block w-full border-b border-[var(--color-line)] px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.1em] transition-colors last:border-b-0 ${
+                      active
+                        ? 'bg-[var(--color-amber-dim)] text-[var(--color-amber)]'
+                        : 'text-[var(--color-signal)] hover:text-[var(--color-bone)]'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                )
+              })}
+            </nav>
+          )}
+        </div>
+
         <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true">
           <circle cx="16" cy="16" r="14" fill="rgb(232 163 61 / 0.1)" stroke="var(--color-amber)" strokeWidth="1" />
           <circle cx="16" cy="16" r="9" stroke="var(--color-amber)" strokeWidth="1.2" />

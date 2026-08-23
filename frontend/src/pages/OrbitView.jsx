@@ -1,19 +1,24 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { WarningCircle } from '@phosphor-icons/react'
-import { Globe } from '../globe/Globe'
 import { TopNav } from '../components/hud/TopNav'
 import { SideNav } from '../components/hud/SideNav'
-import { CenterReticle } from '../components/hud/CenterReticle'
 import { SystemStatusHud } from '../components/hud/SystemStatusHud'
+import { SelectedAsteroidCard } from '../components/hud/SelectedAsteroidCard'
 import { ThreatsPanel } from '../components/hud/ThreatsPanel'
 import { TelemetryPanel } from '../components/hud/TelemetryPanel'
-import { TrajectoriesPanel } from '../components/hud/TrajectoriesPanel'
+import { SceneErrorBoundary } from '../three/SceneErrorBoundary'
 import { ImpactView } from './ImpactView'
 import { ArchiveView } from './ArchiveView'
 import { Footer } from '../components/Footer'
 import { IngestKeyModal } from '../components/hud/IngestKeyModal'
 import { useAsteroidData } from '../hooks/useAsteroidData'
 import { getStoredIngestKey, setStoredIngestKey } from '../lib/ingestKey'
+
+// Three.js (~600kB) is split into its own chunk so it doesn't block the
+// first paint, even though the Orbit view now needs it right away.
+const SystemScene = lazy(() =>
+  import('../three/SystemScene').then((m) => ({ default: m.SystemScene })),
+)
 
 export function OrbitView() {
   const { rows, status, error, reload, runIngest } = useAsteroidData()
@@ -22,6 +27,7 @@ export function OrbitView() {
   const [activeView, setActiveView] = useState('orbit')
   const [rightPanel, setRightPanel] = useState('threats')
   const [ingestKeyPrompt, setIngestKeyPrompt] = useState(null)
+  const [sceneUnavailable, setSceneUnavailable] = useState(false)
 
   const filteredRows = useMemo(() => {
     if (!hazardousOnly) return rows
@@ -33,9 +39,23 @@ export function OrbitView() {
     [rows],
   )
 
+  // Auto-picks the first row on initial load only — after that, an explicit
+  // deselect (clicking empty space in the 3D scene, or the info card's close
+  // button) sets selectedId to null and it's meant to stay that way. It's
+  // still corrected back to a real row if the current selection gets
+  // filtered out from under it (e.g. the "Hazardous only" toggle), since
+  // that's a side effect of filtering, not a deliberate deselect.
+  const didAutoSelect = useRef(false)
   useEffect(() => {
     if (filteredRows.length === 0) {
       setSelectedId(null)
+      return
+    }
+    if (selectedId == null) {
+      if (!didAutoSelect.current) {
+        didAutoSelect.current = true
+        setSelectedId(filteredRows[0].asteroid.id)
+      }
       return
     }
     if (!filteredRows.some((r) => r.asteroid.id === selectedId)) {
@@ -90,8 +110,26 @@ export function OrbitView() {
       <div className="relative flex h-dvh w-full shrink-0 flex-col overflow-hidden">
         {activeView === 'orbit' && (
           <div className="absolute inset-0">
-            <Globe rows={filteredRows} selectedId={selectedId} onSelect={setSelectedId} />
-            <CenterReticle />
+            {sceneUnavailable ? (
+              <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+                <WarningCircle size={28} className="text-[var(--color-signal)]" />
+                <p className="max-w-xs text-xs text-[var(--color-signal)]">
+                  3D rendering isn't available in this browser — try enabling hardware
+                  acceleration. The lists on the right still work.
+                </p>
+              </div>
+            ) : (
+              <Suspense fallback={null}>
+                <SceneErrorBoundary onError={() => setSceneUnavailable(true)}>
+                  <SystemScene
+                    rows={filteredRows}
+                    selectedId={selectedId}
+                    onSelect={setSelectedId}
+                    onUnavailable={() => setSceneUnavailable(true)}
+                  />
+                </SceneErrorBoundary>
+              </Suspense>
+            )}
             <div
               className="pointer-events-none absolute inset-0"
               style={{
@@ -143,6 +181,21 @@ export function OrbitView() {
                     </div>
                   )}
 
+                  {selectedRow && (
+                    // The Threats/Telemetry aside is a fixed 320px with no
+                    // responsive collapse, so below `sm` this middle column
+                    // has no real room left — hidden here rather than
+                    // rendered truncated; the Impact tab shows the same
+                    // detail at any width.
+                    <div className="mx-auto mb-4 hidden w-full max-w-3xl px-4 sm:block">
+                      <SelectedAsteroidCard
+                        row={selectedRow}
+                        maxScore={maxScore}
+                        onClose={() => setSelectedId(null)}
+                      />
+                    </div>
+                  )}
+
                   <SystemStatusHud status={status} />
                 </div>
 
@@ -157,14 +210,6 @@ export function OrbitView() {
                 )}
                 {rightPanel === 'telemetry' && (
                   <TelemetryPanel rows={filteredRows} onLockNext={lockNext} />
-                )}
-                {rightPanel === 'trajectories' && (
-                  <TrajectoriesPanel
-                    rows={filteredRows}
-                    selectedId={selectedId}
-                    onSelect={setSelectedId}
-                    onLockNext={lockNext}
-                  />
                 )}
               </>
             )}

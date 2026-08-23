@@ -59,6 +59,13 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-jackson</artifactId>
 		</dependency>
+		<!-- /actuator/health — App Runner (or any load balancer) polls this to know the
+		     container is alive. Only "health" is exposed (see application.properties); the
+		     rest of Actuator's endpoints (env, beans, etc.) stay off to avoid leaking config. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
 
 		<dependency>
 			<groupId>org.postgresql</groupId>

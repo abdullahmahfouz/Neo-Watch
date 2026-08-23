@@ -1,9 +1,8 @@
-import { ArrowsClockwise, ChartLine, Sparkle, Target } from '@phosphor-icons/react'
+import { ArrowsClockwise, ChartLine, Target } from '@phosphor-icons/react'
 
 const NAV_LINKS = [
   { key: 'threats', label: 'Threats', icon: Target },
   { key: 'telemetry', label: 'Telemetry', icon: ChartLine },
-  { key: 'trajectories', label: 'Trajectories', icon: Sparkle },
 ]
 
 export function SideNav({ onIngest, status, activePanel, onChangePanel, panelsDisabled }) {

@@ -1,6 +1,6 @@
 @import "tailwindcss";
-@import "@fontsource-variable/geist";
-@import "@fontsource-variable/geist-mono";
+@import "@fontsource-variable/space-grotesk";
+@import "@fontsource-variable/jetbrains-mono";
 
 @theme {
   /* Palette — NeoWatch instrument-panel design system */
@@ -14,9 +14,9 @@
   --color-amber: #e8a33d;
   --color-amber-dim: rgb(232 163 61 / 0.16);
 
-  --font-display: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-body: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", monospace;
+  --font-display: "Space Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Space Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SF Mono", monospace;
 
   --spacing-edge: 32px;
   --spacing-panel: 20px;

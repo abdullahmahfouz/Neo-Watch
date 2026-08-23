@@ -1,5 +1,7 @@
 # NeoWatch
 
+**[Live demo →](https://main.d1xtras8ufi51w.amplifyapp.com)**
+
 ![NeoWatch dashboard: a real Earth with tracked near-Earth objects orbiting it, a live threats list, and hazard alerts](docs/screenshot.png)
 
 NeoWatch pulls near-Earth object (NEO) data from NASA's public feed, stores it, scores how risky each close approach is, and puts all of it on a live orbital-command dashboard — a real Earth with tracked objects rendered around it, a risk trend per asteroid, and hazard alerts — so you get "what's hazardous," "what's coming up," and "how has this asteroid's risk trended over time" without hitting NASA's API yourself or building a UI for it.
