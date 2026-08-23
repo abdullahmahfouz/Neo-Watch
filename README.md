@@ -1,6 +1,6 @@
 # NeoWatch
 
-**[Live demo →](https://main.d1xtras8ufi51w.amplifyapp.com)**
+**Deployment:** See [frontend/README.md](frontend/README.md#deploying-to-vercel) for Vercel setup.
 
 ![NeoWatch dashboard: a real Earth with tracked near-Earth objects orbiting it, a live threats list, and hazard alerts](docs/screenshot.png)
 

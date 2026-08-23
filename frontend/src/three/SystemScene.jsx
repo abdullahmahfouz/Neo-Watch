@@ -1,6 +1,10 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import {
   buildAsteroidGeometry,
   buildAtmosphereGlow,
@@ -16,7 +20,7 @@ import {
 } from './sceneObjects'
 import { formatAsteroidName, kmToLunarDistance, kmhToKmS } from '../lib/format'
 
-const EARTH_TINT = '#a8c9c2' // light desaturated teal-gray tint — cools the day map without muddying its detail
+const EARTH_DAY_TINT = '#cfe3ea' // faint cool tint mixed at 35% into the real day map — cools it without muddying the photoreal detail the way a full material.color multiply does
 const ATMOSPHERE_COLOR = '#a9dde2'
 const HAZARD_COLOR = '#e8a33d'
 const ROCK_COLOR = '#8a7864' // matte warm gray/brown rock tone
@@ -91,7 +95,24 @@ export function SystemScene({ rows, selectedId, onSelect, onUnavailable }) {
     }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.setSize(container.clientWidth, container.clientHeight)
+    renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.toneMappingExposure = 1.1
     container.appendChild(renderer.domElement)
+
+    // --- postprocessing: a restrained bloom so the sun disc and pulsing
+    // hazard markers get a real glow instead of every light source being a
+    // flat, unlit-looking disc — kept subtle (low strength/threshold) so it
+    // accents highlights rather than washing out the whole frame ---
+    const composer = new EffectComposer(renderer)
+    composer.addPass(new RenderPass(scene, camera))
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(container.clientWidth, container.clientHeight),
+      0.5,
+      0.4,
+      0.85,
+    )
+    composer.addPass(bloomPass)
+    composer.addPass(new OutputPass())
 
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.enableDamping = true
@@ -102,11 +123,16 @@ export function SystemScene({ rows, selectedId, onSelect, onUnavailable }) {
     controls.autoRotateSpeed = 0.4
     controls.target.copy(DEFAULT_TARGET)
 
-    // --- lighting: one shared sun ---
-    scene.add(new THREE.AmbientLight('#4a4d53', 0.9))
+    // --- lighting: key sun + a dim cool fill on the shadow side so asteroids
+    // and Earth's night limb don't crush to pure black (a single flat, bright
+    // ambient light was flattening the whole scene into one shadeless mush) ---
+    scene.add(new THREE.AmbientLight('#3a3d45', 0.4))
     const sunLight = new THREE.DirectionalLight(SUN_COLOR, 1.6)
     sunLight.position.copy(SUN_DIRECTION.clone().multiplyScalar(20))
     scene.add(sunLight)
+    const fillLight = new THREE.DirectionalLight('#4a7fc9', 0.35)
+    fillLight.position.copy(SUN_DIRECTION.clone().multiplyScalar(-15))
+    scene.add(fillLight)
 
     const sunDistance = 45
     const sunPosition = SUN_DIRECTION.clone().multiplyScalar(sunDistance)
@@ -121,32 +147,99 @@ export function SystemScene({ rows, selectedId, onSelect, onUnavailable }) {
     sunGlow.position.copy(sunPosition)
     scene.add(sunGlow)
 
-    // --- earth: real NASA day/normal/specular/cloud maps, desaturated to the
-    // moody teal-blue palette via a color tint rather than a bright literal map ---
+    // --- earth: real NASA day/normal/specular/night-lights/cloud maps, driven
+    // by a custom day/night terminator shader (the same technique behind the
+    // official three.js Earth example) instead of one flat MeshStandardMaterial
+    // pass — that flattened the sphere into a uniformly-lit, muddy-tinted ball
+    // with no ocean glint and no night side, which read as "ugly" rather than
+    // photoreal ---
     const textureLoader = new THREE.TextureLoader()
     const dayMap = textureLoader.load('/textures/earth_atmos_2048.jpg')
     dayMap.colorSpace = THREE.SRGBColorSpace
+    const nightMap = textureLoader.load('/textures/earth_lights_2048.png')
+    nightMap.colorSpace = THREE.SRGBColorSpace
     const normalMap = textureLoader.load('/textures/earth_normal_2048.jpg')
+    const specularMap = textureLoader.load('/textures/earth_specular_2048.jpg')
     const cloudsMap = textureLoader.load('/textures/earth_clouds_1024.png')
     cloudsMap.colorSpace = THREE.SRGBColorSpace
 
     const earthGroup = new THREE.Group()
-    const earthMesh = new THREE.Mesh(
-      new THREE.SphereGeometry(1, 64, 64),
-      new THREE.MeshStandardMaterial({
-        map: dayMap,
-        normalMap,
-        normalScale: new THREE.Vector2(0.3, 0.3),
-        // No roughnessMap: the source specular map is bright on ocean/dark on
-        // land (a "how shiny" mask), which is the inverse of what
-        // MeshStandardMaterial's roughnessMap expects (bright = rough) — wiring
-        // it in directly made oceans look dull and land look plastic-shiny.
-        // A flat matte value reads far better at this scene's small scale.
-        roughness: 0.75,
-        metalness: 0.05,
-        color: EARTH_TINT,
-      }),
-    )
+    const earthGeometry = new THREE.SphereGeometry(1, 96, 96)
+    earthGeometry.computeTangents()
+    const sunDirView = new THREE.Vector3()
+    const earthMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        dayMap: { value: dayMap },
+        nightMap: { value: nightMap },
+        normalMap: { value: normalMap },
+        specularMap: { value: specularMap },
+        sunDirectionView: { value: sunDirView },
+        tintColor: { value: new THREE.Color(EARTH_DAY_TINT) },
+        normalScale: { value: 0.55 },
+      },
+      vertexShader: `
+        attribute vec4 tangent;
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        varying vec3 vTangent;
+        varying vec3 vBitangent;
+        varying vec3 vViewPosition;
+        void main() {
+          vUv = uv;
+          vNormal = normalize(normalMatrix * normal);
+          vTangent = normalize(normalMatrix * tangent.xyz);
+          vBitangent = normalize(cross(vNormal, vTangent) * tangent.w);
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          vViewPosition = -mvPosition.xyz;
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D dayMap;
+        uniform sampler2D nightMap;
+        uniform sampler2D normalMap;
+        uniform sampler2D specularMap;
+        uniform vec3 sunDirectionView;
+        uniform vec3 tintColor;
+        uniform float normalScale;
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        varying vec3 vTangent;
+        varying vec3 vBitangent;
+        varying vec3 vViewPosition;
+
+        void main() {
+          vec3 dayColor = texture2D(dayMap, vUv).rgb;
+          vec3 nightColor = texture2D(nightMap, vUv).rgb;
+          // Source mask is bright on ocean / dark on land — used directly as
+          // a specular gate rather than fed into a roughness slot, which
+          // expects the opposite convention.
+          float oceanMask = texture2D(specularMap, vUv).r;
+
+          vec3 mapN = texture2D(normalMap, vUv).xyz * 2.0 - 1.0;
+          mapN.xy *= normalScale;
+          mat3 TBN = mat3(normalize(vTangent), normalize(vBitangent), normalize(vNormal));
+          vec3 N = normalize(TBN * mapN);
+
+          vec3 L = normalize(sunDirectionView);
+          float NdotL = dot(N, L);
+          float dayFactor = smoothstep(-0.2, 0.2, NdotL);
+
+          vec3 V = normalize(vViewPosition);
+          vec3 H = normalize(L + V);
+          float spec = pow(max(dot(N, H), 0.0), 70.0) * oceanMask * smoothstep(0.0, 0.3, NdotL);
+
+          vec3 tinted = mix(dayColor, dayColor * tintColor, 0.35);
+          vec3 color = mix(nightColor * 1.6, tinted, dayFactor);
+          color += spec * vec3(1.0, 0.97, 0.88) * 1.1;
+          // Faint fill so the dark limb reads as shadow, not a crushed-black cutout.
+          color += tinted * 0.025;
+
+          gl_FragColor = vec4(color, 1.0);
+        }
+      `,
+    })
+    const earthMesh = new THREE.Mesh(earthGeometry, earthMaterial)
     earthGroup.add(earthMesh)
 
     const cloudMesh = new THREE.Mesh(
@@ -213,13 +306,17 @@ export function SystemScene({ rows, selectedId, onSelect, onUnavailable }) {
     function clearGroup(group) {
       for (const obj of [...group.children]) {
         group.remove(obj)
-        obj.geometry?.dispose()
-        // Material.dispose() doesn't cascade to the textures it references —
-        // buildLabelSprite() allocates a fresh CanvasTexture per call, and this
-        // group gets rebuilt on nearly every hover/selection change, so skipping
-        // this leaks a GPU texture each time.
-        obj.material?.map?.dispose()
-        obj.material?.dispose()
+        // Recursive: marker meshes now carry an invisible hit-sphere child
+        // (see rebuildMarkers), so a shallow dispose would leak its geometry.
+        obj.traverse((child) => {
+          child.geometry?.dispose()
+          // Material.dispose() doesn't cascade to the textures it references —
+          // buildLabelSprite() allocates a fresh CanvasTexture per call, and this
+          // group gets rebuilt on nearly every hover/selection change, so skipping
+          // this leaks a GPU texture each time.
+          child.material?.map?.dispose()
+          child.material?.dispose()
+        })
       }
     }
 
@@ -261,16 +358,37 @@ export function SystemScene({ rows, selectedId, onSelect, onUnavailable }) {
         const rockRadius = clamp(0.1 + avgDiameterKm * 0.018, 0.08, 0.34)
         const hazardous = row.asteroid.isPotentiallyHazardous
 
+        // Seeded per-rock jitter so the field reads as distinct bodies rather
+        // than one mesh cloned forty times — every rock was previously the
+        // exact same flat color and finish.
+        const rockColor = new THREE.Color(ROCK_COLOR).offsetHSL(
+          (rand() - 0.5) * 0.03,
+          (rand() - 0.5) * 0.1,
+          (rand() - 0.5) * 0.08,
+        )
         const material = new THREE.MeshStandardMaterial({
-          color: ROCK_COLOR,
-          roughness: 1,
-          metalness: 0.05,
+          color: rockColor,
+          roughness: 0.85 + rand() * 0.15,
+          metalness: 0.02 + rand() * 0.06,
           flatShading: true,
           emissive: hazardous ? new THREE.Color(HAZARD_COLOR) : new THREE.Color('#000000'),
           emissiveIntensity: 0,
         })
         const mesh = new THREE.Mesh(buildAsteroidGeometry(rockRadius, seed), material)
         mesh.userData = { id: row.asteroid.id, orbitRadius, angularSpeed, phase, orbitQuat, rockRadius }
+        // The visible rock is a noisy, sometimes-concave icosahedron (see
+        // buildAsteroidGeometry) at a small world radius (0.1-0.34) — on
+        // screen that's only a handful of pixels for the smaller ones, so
+        // raycasting against the exact mesh made smaller asteroids nearly
+        // impossible to click precisely. An invisible, generously-sized
+        // sphere gives every marker a forgiving, consistent hit target
+        // without changing what's actually rendered.
+        const hitMesh = new THREE.Mesh(
+          new THREE.SphereGeometry(Math.max(rockRadius * 1.8, 0.16), 12, 12),
+          new THREE.MeshBasicMaterial({ visible: false }),
+        )
+        hitMesh.userData = mesh.userData
+        mesh.add(hitMesh)
         markerGroup.add(mesh)
         markersById.set(row.asteroid.id, mesh)
       }
@@ -347,7 +465,9 @@ export function SystemScene({ rows, selectedId, onSelect, onUnavailable }) {
         -((e.clientY - rect.top) / rect.height) * 2 + 1,
       )
       raycaster.setFromCamera(ndc, camera)
-      return raycaster.intersectObjects(markerGroup.children, false)
+      // Recursive: each marker's invisible hit-sphere is a child, not a
+      // sibling, of the visible rock mesh.
+      return raycaster.intersectObjects(markerGroup.children, true)
     }
 
     function onPointerMove(e) {
@@ -451,7 +571,14 @@ export function SystemScene({ rows, selectedId, onSelect, onUnavailable }) {
       }
 
       controls.update()
-      renderer.render(scene, camera)
+      // camera.matrixWorldInverse is only refreshed by updateMatrixWorld(),
+      // which the renderer normally calls internally during render() — too
+      // late to read here. Calling it explicitly makes matrixWorldInverse
+      // reflect this frame's camera (post autoRotate / selection tween)
+      // instead of the previous frame's, before the Earth shader reads it.
+      camera.updateMatrixWorld()
+      sunDirView.copy(SUN_DIRECTION).transformDirection(camera.matrixWorldInverse)
+      composer.render()
       frameId = requestAnimationFrame(animate)
     }
     animate()
@@ -462,6 +589,10 @@ export function SystemScene({ rows, selectedId, onSelect, onUnavailable }) {
       camera.aspect = clientWidth / clientHeight
       camera.updateProjectionMatrix()
       renderer.setSize(clientWidth, clientHeight)
+      // composer.setSize() already forwards pixel-ratio-scaled dimensions to
+      // every pass, bloomPass included — a separate bloomPass.setSize() call
+      // here would pass unscaled CSS pixels and undo that scaling on HiDPI.
+      composer.setSize(clientWidth, clientHeight)
     }
     const resizeObserver = new ResizeObserver(handleResize)
     resizeObserver.observe(container)
@@ -473,8 +604,18 @@ export function SystemScene({ rows, selectedId, onSelect, onUnavailable }) {
       renderer.domElement.removeEventListener('pointerdown', onPointerDown)
       renderer.domElement.removeEventListener('pointerup', onPointerUp)
       controls.dispose()
+      // EffectComposer.dispose() only frees its own two internal render
+      // targets and copy pass — it doesn't cascade to the passes it holds,
+      // so bloomPass's ~11 render targets and 3 shader materials need
+      // disposing explicitly or every unmount leaks a full set of them.
+      bloomPass.dispose()
+      composer.dispose()
       renderer.dispose()
       container.removeChild(renderer.domElement)
+      dayMap.dispose()
+      nightMap.dispose()
+      normalMap.dispose()
+      specularMap.dispose()
       scene.traverse((obj) => {
         if (obj.geometry) obj.geometry.dispose()
         if (obj.material) {

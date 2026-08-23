@@ -49,3 +49,16 @@ npm run build
 For a backend on a different origin, set `VITE_API_BASE_URL` (e.g. in a
 `.env` file) to that backend's URL. Also make sure the backend's
 `ALLOWED_ORIGINS` includes wherever this build ends up served from.
+
+## Deploying to Vercel
+
+The repository root contains a `vercel.json` configured for this frontend. In
+Vercel, import the repository with `/` as the project root and add:
+
+```text
+VITE_API_BASE_URL=https://<your-backend-origin>
+```
+
+Vercel builds from `frontend/` and serves its `dist/` directory. The Spring Boot
+backend must remain deployed separately, and its `ALLOWED_ORIGINS` must include
+the final Vercel URL.

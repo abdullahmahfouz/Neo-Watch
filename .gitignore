@@ -8,3 +8,5 @@ global-bundle.pem
 .DS_Store
 hs_err_pid*.log
 deploy.local.json
+.vercel
+.env*
