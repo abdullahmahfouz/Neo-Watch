@@ -1,5 +1,6 @@
 package com.abdullah.neowatch.controller;
 
+import com.abdullah.neowatch.dto.DashboardRow;
 import com.abdullah.neowatch.model.Asteroid;
 import com.abdullah.neowatch.model.CloseApproach;
 import com.abdullah.neowatch.model.RiskSnapshot;
@@ -21,6 +22,14 @@ public class NeoController {
 
     public NeoController(AsteroidService asteroidService) {
         this.asteroidService = asteroidService;
+    }
+
+    // Everything the dashboard needs in one call: union of upcoming + hazardous asteroids,
+    // each joined to its next-relevant close approach and current risk score. Prefer this
+    // over upcoming()/hazardous() + a history()/risk() loop per asteroid client-side.
+    @GetMapping("/dashboard")
+    public List<DashboardRow> dashboard() {
+        return asteroidService.getDashboardRows();
     }
 
     @GetMapping("/upcoming")

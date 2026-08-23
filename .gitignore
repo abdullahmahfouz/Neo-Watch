@@ -3,3 +3,4 @@
 .idea/
 *.iml
 global-bundle.pem
+.gstack/

@@ -9,6 +9,9 @@ import java.util.List;
 
 // Triggers an on-demand pull of NASA's current NEO feed into the database. GET (not POST)
 // purely for manual/browser-triggered convenience during early development.
+//
+// Gated behind X-Ingest-Key (when app.ingest-key is configured) by IngestKeyFilter, not
+// here — see com.abdullah.neowatch.config.IngestKeyFilter.
 @RestController
 public class IngestController {
 

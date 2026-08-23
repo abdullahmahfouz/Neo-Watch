@@ -1,6 +1,7 @@
 package com.abdullah.neowatch.service;
 
 import com.abdullah.neowatch.client.NasaClient;
+import com.abdullah.neowatch.dto.DashboardRow;
 import com.abdullah.neowatch.model.Asteroid;
 import com.abdullah.neowatch.model.CloseApproach;
 import com.abdullah.neowatch.model.RiskSnapshot;
@@ -16,7 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 // Coordinates fetching the current NEO feed from NASA (NasaClient) and persisting it
@@ -45,8 +49,8 @@ public class AsteroidService {
     // otherwise a cached response could keep serving pre-ingest values after new data lands.
     @Scheduled(cron = "0 0 0 * * *")
     @Transactional
-    @CacheEvict(value = {"hazardousAsteroids", "upcomingAsteroids", "approachHistory", "riskScore", "riskHistory"},
-            allEntries = true)
+    @CacheEvict(value = {"hazardousAsteroids", "upcomingAsteroids", "approachHistory", "riskScore", "riskHistory",
+            "dashboardRows"}, allEntries = true)
     public List<Asteroid> ingestTodayAsteroids() {
         List<Asteroid> fetchedAsteroids = nasaClient.fetchTodayAsteroids();
 
@@ -144,5 +148,49 @@ public class AsteroidService {
     @Cacheable(value = "riskHistory", key = "#asteroidId")
     public List<RiskSnapshot> getRiskHistory(Long asteroidId) {
         return riskSnapshotRepository.findByAsteroidIdOrderByCalculatedAtAsc(asteroidId);
+    }
+
+    // Everything the dashboard needs (union of upcoming + hazardous, each joined to its
+    // next-relevant approach and current risk score) in one call, instead of the frontend
+    // making a separate history + risk request per asteroid.
+    //
+    // Queries the repositories directly rather than calling getUpcomingAsteroids() /
+    // getHazardousAsteroids() / getApproachHistory() / getRiskScore() on `this` — self-
+    // invocation within the same bean bypasses Spring's proxy, so those methods'
+    // @Cacheable would silently never fire if called from here. Fetching each asteroid's
+    // approaches once and reusing that same list for both the next-approach pick and the
+    // risk score also avoids getRiskScore()'s redundant re-fetch of the same data.
+    @Cacheable("dashboardRows")
+    public List<DashboardRow> getDashboardRows() {
+        LocalDate today = LocalDate.now();
+
+        Map<Long, Asteroid> byId = new LinkedHashMap<>();
+        for (Asteroid asteroid : asteroidRepository.findWithApproachBetween(today, today.plusDays(7))) {
+            byId.put(asteroid.getId(), asteroid);
+        }
+        for (Asteroid asteroid : asteroidRepository.findByIsPotentiallyHazardousTrue()) {
+            byId.put(asteroid.getId(), asteroid);
+        }
+
+        List<DashboardRow> rows = new ArrayList<>();
+        for (Asteroid asteroid : byId.values()) {
+            List<CloseApproach> approaches = closeApproachRepository.findByAsteroidId(asteroid.getId());
+
+            CloseApproach nextApproach = approaches.stream()
+                    .sorted(Comparator.comparing(CloseApproach::getApproachDate))
+                    .filter(a -> !a.getApproachDate().isBefore(today))
+                    .findFirst()
+                    .orElseGet(() -> approaches.stream()
+                            .max(Comparator.comparing(CloseApproach::getApproachDate))
+                            .orElse(null));
+
+            double riskScore = approaches.stream()
+                    .mapToDouble(closeApproach -> calculateRiskScore(asteroid, closeApproach))
+                    .max()
+                    .orElse(0.0);
+
+            rows.add(new DashboardRow(asteroid, nextApproach, riskScore));
+        }
+        return rows;
     }
 }

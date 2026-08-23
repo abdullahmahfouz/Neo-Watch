@@ -1,0 +1,4 @@
+# Personal tool over live tracking data, not public content meant to be
+# indexed or crawled.
+User-agent: *
+Disallow: /
