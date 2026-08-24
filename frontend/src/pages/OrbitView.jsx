@@ -5,6 +5,7 @@ import { SideNav } from '../components/hud/SideNav'
 import { MobileBottomNav } from '../components/hud/MobileBottomNav'
 import { SystemStatusHud } from '../components/hud/SystemStatusHud'
 import { SelectedAsteroidCard } from '../components/hud/SelectedAsteroidCard'
+import { SelectedAsteroidChip } from '../components/hud/SelectedAsteroidChip'
 import { ThreatsPanel } from '../components/hud/ThreatsPanel'
 import { TelemetryPanel } from '../components/hud/TelemetryPanel'
 import { SceneErrorBoundary } from '../three/SceneErrorBoundary'
@@ -218,30 +219,47 @@ export function OrbitView() {
 
                   {selectedRow && (
                     <div className="relative z-20 mx-auto w-full max-w-3xl px-4">
-                      <SelectedAsteroidCard
-                        row={selectedRow}
-                        maxScore={maxScore}
-                        onClose={() => setSelectedId(null)}
-                        onViewDetails={() => viewDetails(selectedRow.asteroid.id)}
-                      />
+                      {/* Mobile: a one-line tappable summary so the globe stays the main
+                          event. Desktop: the full metrics card, which there's room for. */}
+                      <div className="lg:hidden">
+                        <SelectedAsteroidChip
+                          row={selectedRow}
+                          onViewDetails={() => viewDetails(selectedRow.asteroid.id)}
+                        />
+                      </div>
+                      <div className="hidden lg:block">
+                        <SelectedAsteroidCard
+                          row={selectedRow}
+                          maxScore={maxScore}
+                          onClose={() => setSelectedId(null)}
+                          onViewDetails={() => viewDetails(selectedRow.asteroid.id)}
+                        />
+                      </div>
                     </div>
                   )}
 
-                  <div className="px-4 lg:px-0">
+                  {/* Status chrome, not essential to the globe experience — desktop only */}
+                  <div className="hidden lg:block">
                     <SystemStatusHud status={status} />
                   </div>
                 </div>
 
-                {rightPanel === 'threats' && (
-                  <ThreatsPanel
-                    rows={filteredRows}
-                    selectedId={selectedId}
-                    onSelect={setSelectedId}
-                    onLockNext={lockNext}
-                    isLoading={isLoading}
-                    hazardousOnly={hazardousOnly}
-                  />
-                )}
+                {/* The Threats list duplicates the "Asteroids" bottom-nav tab on mobile,
+                    where there's no room to show it alongside the globe anyway */}
+                <div className="hidden lg:block">
+                  {rightPanel === 'threats' && (
+                    <ThreatsPanel
+                      rows={filteredRows}
+                      selectedId={selectedId}
+                      onSelect={setSelectedId}
+                      onLockNext={lockNext}
+                      isLoading={isLoading}
+                      hazardousOnly={hazardousOnly}
+                    />
+                  )}
+                </div>
+                {/* Telemetry only ever renders when explicitly requested (MoreMenu's
+                    "Technical details"), so it's fine on any viewport including mobile */}
                 {rightPanel === 'telemetry' && (
                   <TelemetryPanel rows={filteredRows} onLockNext={lockNext} />
                 )}
