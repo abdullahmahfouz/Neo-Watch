@@ -24,7 +24,7 @@ export function InfoTooltip({ title, children, align = 'left' }) {
         onClick={() => setOpen((v) => !v)}
         aria-label={`About ${title}`}
         aria-expanded={open}
-        className="text-[var(--color-signal)] transition-colors hover:text-[var(--color-amber)]"
+        className="-m-2.5 flex size-9 items-center justify-center text-[var(--color-signal)] transition-colors hover:text-[var(--color-amber)]"
       >
         <Info size={13} />
       </button>

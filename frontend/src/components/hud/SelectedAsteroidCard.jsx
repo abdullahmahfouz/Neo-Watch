@@ -1,4 +1,4 @@
-import { X } from '@phosphor-icons/react'
+import { ArrowRight, X } from '@phosphor-icons/react'
 import { HazardIndicator } from '../HazardIndicator'
 import { MetricStat } from '../MetricStat'
 import { ImpactEnergyGauge } from '../ImpactEnergyGauge'
@@ -15,7 +15,7 @@ import {
 // Sits over the bottom of the Orbit view's 3D scene, updating in place as
 // the user clicks different markers — the "info about it" panel from the
 // old separate 3D-view page, folded into the same screen as the globe.
-export function SelectedAsteroidCard({ row, maxScore, onClose }) {
+export function SelectedAsteroidCard({ row, maxScore, onClose, onViewDetails }) {
   if (!row) return null
   const { asteroid, approach, impactEnergyMt } = row
 
@@ -25,8 +25,8 @@ export function SelectedAsteroidCard({ row, maxScore, onClose }) {
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close"
-          className="absolute right-3 top-3 text-[var(--color-signal)] transition-colors hover:text-[var(--color-amber)]"
+          aria-label="Close asteroid details"
+          className="absolute right-2 top-2 flex size-9 items-center justify-center text-[var(--color-signal)] transition-colors hover:text-[var(--color-amber)]"
         >
           <X size={16} />
         </button>
@@ -43,14 +43,22 @@ export function SelectedAsteroidCard({ row, maxScore, onClose }) {
             Asteroid ID · {asteroid.nasaId ?? asteroid.id}
           </span>
         </div>
-        <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-signal)]">
-          Closest approach · {formatDate(approach?.approachDate)}
+        <span className="flex items-center gap-1 text-[11px] text-[var(--color-signal)]">
+          Closest approach · <span className="text-[var(--color-bone)]">{formatDate(approach?.approachDate)}</span>
+          <InfoTooltip title="Closest approach">
+            The date this asteroid passes closest to Earth. It does not mean an impact.
+          </InfoTooltip>
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-5 sm:items-end">
+      {/* This card lives beside a fixed-width sidebar and watchlist panel at lg+, so its
+          available width actually shrinks right when `sm:grid-cols-5` would kick in — the
+          5-column layout only gets enough room again once the viewport is wide enough to
+          give it back (xl). Between those, 3 columns keeps labels from wrapping onto each
+          other. */}
+      <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 sm:items-end xl:grid-cols-5">
         <MetricStat
-          label="Diameter"
+          label="Estimated size"
           value={formatDiameterRange(
             asteroid.estimatedDiameterMinKm,
             asteroid.estimatedDiameterMaxKm,
@@ -58,22 +66,40 @@ export function SelectedAsteroidCard({ row, maxScore, onClose }) {
           unit="m"
         />
         <MetricStat
-          label="Velocity"
+          label="Speed"
           value={formatVelocity(approach?.relativeVelocityKmh)}
           unit="km/s"
         />
-        <MetricStat label="Distance" value={formatDistance(approach?.missDistanceKm)} unit="LD" />
-        <MetricStat label="Orbiting body" value={approach?.orbitingBody ?? '—'} />
+        <MetricStat label="Distance from Earth" value={formatDistance(approach?.missDistanceKm)} unit="LD" />
+        <MetricStat label="Orbits" value={approach?.orbitingBody ?? '—'} />
         <div className="col-span-2 sm:col-span-1">
           <span className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.14em] text-[var(--color-signal)]">
-            Energy (Mt)
-            <InfoTooltip title="What is impact energy?">
+            Estimated impact energy
+            <InfoTooltip title="What is impact energy?" align="right">
               <EnergyExplainer compact />
             </InfoTooltip>
           </span>
-          <ImpactEnergyGauge score={impactEnergyMt} maxScore={maxScore} size="md" delay={0} showComparison />
+          <ImpactEnergyGauge
+            score={impactEnergyMt}
+            maxScore={maxScore}
+            size="md"
+            delay={0}
+            showComparison
+            showCategory
+          />
         </div>
       </div>
+
+      {onViewDetails && (
+        <button
+          type="button"
+          onClick={onViewDetails}
+          className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 border border-[var(--color-line-strong)] bg-[var(--color-void)]/40 text-xs font-semibold text-[var(--color-bone)] transition-colors hover:border-[var(--color-amber)] hover:text-[var(--color-amber)] sm:w-auto sm:px-5"
+        >
+          View asteroid details
+          <ArrowRight size={14} weight="bold" />
+        </button>
+      )}
     </div>
   )
 }

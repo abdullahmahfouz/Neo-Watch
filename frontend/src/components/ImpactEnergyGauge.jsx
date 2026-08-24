@@ -1,17 +1,29 @@
 import { useEffect, useState } from 'react'
 import { motion, useReducedMotion, animate } from 'motion/react'
-import { formatImpactEnergy, formatEnergyComparison } from '../lib/format'
+import {
+  formatImpactEnergy,
+  formatEnergyComparison,
+  categorizeEnergyMagnitude,
+} from '../lib/format'
 
 // Bars are scaled proportionally against the highest impact energy estimate currently loaded,
 // not a fixed 0-100 ceiling. The backend's kinetic-energy formula (megatons of TNT equivalent)
 // has no fixed max, so a relative scale is the honest one. This is a magnitude bar, not a
 // probability meter — it never implies "X% chance of impact."
-export function ImpactEnergyGauge({ score, maxScore, delay = 0, size = 'md', showComparison = false }) {
+export function ImpactEnergyGauge({
+  score,
+  maxScore,
+  delay = 0,
+  size = 'md',
+  showComparison = false,
+  showCategory = false,
+}) {
   const reduceMotion = useReducedMotion()
   const ratio = maxScore > 0 ? Math.min(score / maxScore, 1) : 0
   const [displayScore, setDisplayScore] = useState(reduceMotion ? score : 0)
   const height = size === 'lg' ? 'h-2' : 'h-1.5'
   const comparison = showComparison ? formatEnergyComparison(score) : null
+  const category = showCategory ? categorizeEnergyMagnitude(score) : null
 
   useEffect(() => {
     if (reduceMotion) {
@@ -48,8 +60,12 @@ export function ImpactEnergyGauge({ score, maxScore, delay = 0, size = 'md', sho
           }`}
         >
           {formatImpactEnergy(displayScore)}
+          <span className="ml-1 text-[var(--color-signal)]">Mt</span>
         </span>
       </div>
+      {category && (
+        <span className="text-xs font-medium text-[var(--color-bone)]">{category}</span>
+      )}
       {comparison && (
         <span className="text-[10px] text-[var(--color-signal)]">{comparison}</span>
       )}

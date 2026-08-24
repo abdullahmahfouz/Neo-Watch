@@ -1,4 +1,4 @@
-export function EmptyState({ message = 'No close approaches in this window' }) {
+export function EmptyState({ message = 'No asteroids to display.', hint }) {
   return (
     <div className="flex flex-col items-center gap-4 border-t border-[var(--color-line)] py-20 text-center">
       <svg width="72" height="72" viewBox="0 0 72 72" fill="none" aria-hidden="true">
@@ -21,7 +21,10 @@ export function EmptyState({ message = 'No close approaches in this window' }) {
           transform="rotate(35 36 36)"
         />
       </svg>
-      <p className="text-sm text-[var(--color-signal)]">{message}</p>
+      <div className="flex flex-col gap-1">
+        <p className="text-sm text-[var(--color-bone)]">{message}</p>
+        {hint && <p className="text-xs text-[var(--color-signal)]">{hint}</p>}
+      </div>
     </div>
   )
 }

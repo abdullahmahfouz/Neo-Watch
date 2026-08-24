@@ -1,3 +1,4 @@
+import { ArrowLeft } from '@phosphor-icons/react'
 import { FeaturedAsteroid } from '../components/FeaturedAsteroid'
 import { EmptyState } from '../components/EmptyState'
 import { EnergyExplainer } from '../components/EnergyExplainer'
@@ -6,7 +7,7 @@ import {
   formatDate,
   formatDateTime,
   formatDistance,
-  formatImpactEnergy,
+  formatImpactEnergyWithUnit,
   formatVelocity,
 } from '../lib/format'
 
@@ -31,15 +32,26 @@ function SkeletonBlock() {
   )
 }
 
-export function ImpactView({ selectedRow, maxScore }) {
+export function ImpactView({ selectedRow, maxScore, onBack }) {
   const asteroidId = selectedRow?.asteroid.id ?? null
   const { history, impactEnergyHistory, status } = useAsteroidDetail(asteroidId)
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-8">
+    <div className="flex-1 overflow-y-auto px-4 pb-20 pt-6 sm:px-8 sm:pb-6">
       <div className="mx-auto flex max-w-[900px] flex-col gap-10">
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="-ml-2 flex min-h-11 w-fit items-center gap-2 px-2 text-xs font-semibold text-[var(--color-signal)] transition-colors hover:text-[var(--color-amber)]"
+          >
+            <ArrowLeft size={15} weight="bold" />
+            Back
+          </button>
+        )}
+
         {!selectedRow && (
-          <EmptyState message="Select a target from Threats to view impact detail" />
+          <EmptyState message="No asteroid selected." hint="Pick an asteroid from the watchlist to see its details." />
         )}
 
         {selectedRow && (
@@ -61,6 +73,12 @@ export function ImpactView({ selectedRow, maxScore }) {
               )}
               {status !== 'loading' && history.length > 0 && (
                 <div className="border-t border-[var(--color-line)]">
+                  <div className="grid grid-cols-4 gap-4 py-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-signal)]">
+                    <span>Date</span>
+                    <span>Distance from Earth</span>
+                    <span>Speed</span>
+                    <span>Orbits</span>
+                  </div>
                   {[...history]
                     .sort((a, b) => a.approachDate.localeCompare(b.approachDate))
                     .map((approach) => (
@@ -86,11 +104,11 @@ export function ImpactView({ selectedRow, maxScore }) {
               )}
             </Section>
 
-            <Section title="Impact energy trend (per ingest)">
+            <Section title="Impact energy trend, per data refresh">
               {status === 'loading' && <SkeletonBlock />}
               {status !== 'loading' && impactEnergyHistory.length === 0 && (
                 <p className="text-sm text-[var(--color-signal)]">
-                  No impact energy snapshots recorded yet. Run another scan to start a trend.
+                  No impact energy snapshots recorded yet. Refresh the data to start a trend.
                 </p>
               )}
               {status !== 'loading' && impactEnergyHistory.length > 0 && (
@@ -104,7 +122,7 @@ export function ImpactView({ selectedRow, maxScore }) {
                         {formatDateTime(snapshot.calculatedAt)}
                       </span>
                       <span className="tabular text-[var(--color-amber)]">
-                        {formatImpactEnergy(snapshot.impactEnergyMt)}
+                        {formatImpactEnergyWithUnit(snapshot.impactEnergyMt)}
                       </span>
                     </div>
                   ))}

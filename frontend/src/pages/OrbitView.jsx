@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { WarningCircle } from '@phosphor-icons/react'
 import { TopNav } from '../components/hud/TopNav'
 import { SideNav } from '../components/hud/SideNav'
+import { MobileBottomNav } from '../components/hud/MobileBottomNav'
 import { SystemStatusHud } from '../components/hud/SystemStatusHud'
 import { SelectedAsteroidCard } from '../components/hud/SelectedAsteroidCard'
 import { ThreatsPanel } from '../components/hud/ThreatsPanel'
@@ -25,6 +26,7 @@ export function OrbitView() {
   const [hazardousOnly, setHazardousOnly] = useState(false)
   const [selectedId, setSelectedId] = useState(null)
   const [activeView, setActiveView] = useState('orbit')
+  const [previousView, setPreviousView] = useState('orbit')
   const [rightPanel, setRightPanel] = useState('threats')
   const [ingestKeyPrompt, setIngestKeyPrompt] = useState(null)
   const [sceneUnavailable, setSceneUnavailable] = useState(false)
@@ -70,13 +72,38 @@ export function OrbitView() {
     setSelectedId(next.asteroid.id)
   }
 
-  function resetFilters() {
+  // The three primary destinations (Home / Asteroids / Alerts), reachable
+  // identically from the desktop top bar and the mobile bottom nav. Alerts is
+  // not a separate page — it's the existing hazardous-only filter combined
+  // with the Asteroids list, so there's exactly one hazardous-filtering
+  // control instead of a nav item duplicating a filter pill.
+  function goHome() {
     setHazardousOnly(false)
-    if (rows.length > 0) setSelectedId(rows[0].asteroid.id)
+    setActiveView('orbit')
   }
 
-  function selectFromAlert(id) {
+  function goAsteroids() {
+    setHazardousOnly(false)
+    setActiveView('archive')
+  }
+
+  function goAlerts() {
+    setHazardousOnly(true)
+    setActiveView('archive')
+  }
+
+  function viewDetails(id) {
+    setPreviousView(activeView === 'archive' ? 'archive' : 'orbit')
     setSelectedId(id)
+    setActiveView('impact')
+  }
+
+  function backFromDetails() {
+    setActiveView(previousView)
+  }
+
+  function showTechnicalDetails() {
+    setRightPanel('telemetry')
     setActiveView('orbit')
   }
 
@@ -104,6 +131,9 @@ export function OrbitView() {
     [filteredRows],
   )
   const selectedRow = filteredRows.find((r) => r.asteroid.id === selectedId) ?? null
+
+  const activeTab =
+    activeView === 'orbit' ? 'home' : activeView === 'archive' ? (hazardousOnly ? 'alerts' : 'asteroids') : null
 
   return (
     <div className="flex min-h-dvh w-full flex-col bg-[var(--color-void)]">
@@ -142,20 +172,17 @@ export function OrbitView() {
 
         <div className="relative z-10 flex h-full flex-col">
           <TopNav
-            activeView={activeView}
-            onChangeView={setActiveView}
-            hazardousOnly={hazardousOnly}
-            onToggleHazardous={() => setHazardousOnly((v) => !v)}
-            onReset={resetFilters}
+            activeTab={activeTab}
+            onHome={goHome}
+            onAsteroids={goAsteroids}
+            onAlerts={goAlerts}
             hazardousRows={hazardousRows}
-            onSelectAlert={selectFromAlert}
-            activePanel={rightPanel}
-            onChangePanel={setRightPanel}
-            onIngest={() => attemptIngest(getStoredIngestKey())}
-            ingestStatus={status}
+            onRefresh={() => attemptIngest(getStoredIngestKey())}
+            refreshStatus={status}
+            onShowTechnicalDetails={showTechnicalDetails}
           />
 
-          <div className="flex flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
+          <div className="flex flex-1 flex-col overflow-y-auto pb-16 sm:pb-0 lg:flex-row lg:overflow-hidden">
             <SideNav
               onIngest={() => attemptIngest(getStoredIngestKey())}
               status={status}
@@ -174,27 +201,28 @@ export function OrbitView() {
                   <div className="hidden lg:block lg:flex-1" />
 
                   {status === 'error' && (
-                    <div className="pointer-events-auto mx-auto flex items-center gap-3 border border-[var(--color-amber)]/50 bg-[var(--color-panel)]/90 px-4 py-3 backdrop-blur-md">
-                      <WarningCircle size={16} className="text-[var(--color-amber)]" />
+                    <div className="pointer-events-auto mx-auto flex flex-wrap items-center gap-3 border border-[var(--color-amber)]/50 bg-[var(--color-panel)]/90 px-4 py-3 backdrop-blur-md">
+                      <WarningCircle size={16} className="shrink-0 text-[var(--color-amber)]" />
                       <span className="text-xs text-[var(--color-bone)]">
-                        Could not reach the NeoWatch API
+                        Asteroid data couldn&rsquo;t be loaded.
                       </span>
                       <button
                         type="button"
                         onClick={reload}
-                        className="border border-[var(--color-line-strong)] px-2.5 py-1 text-[10px] uppercase tracking-[0.1em] text-[var(--color-bone)]"
+                        className="min-h-9 border border-[var(--color-line-strong)] px-3 text-xs font-semibold text-[var(--color-bone)] transition-colors hover:border-[var(--color-amber)] hover:text-[var(--color-amber)]"
                       >
-                        Retry
+                        Try again
                       </button>
                     </div>
                   )}
 
                   {selectedRow && (
-                    <div className="mx-auto w-full max-w-3xl px-4">
+                    <div className="relative z-20 mx-auto w-full max-w-3xl px-4">
                       <SelectedAsteroidCard
                         row={selectedRow}
                         maxScore={maxScore}
                         onClose={() => setSelectedId(null)}
+                        onViewDetails={() => viewDetails(selectedRow.asteroid.id)}
                       />
                     </div>
                   )}
@@ -211,6 +239,7 @@ export function OrbitView() {
                     onSelect={setSelectedId}
                     onLockNext={lockNext}
                     isLoading={isLoading}
+                    hazardousOnly={hazardousOnly}
                   />
                 )}
                 {rightPanel === 'telemetry' && (
@@ -220,14 +249,31 @@ export function OrbitView() {
             )}
 
             {activeView === 'impact' && (
-              <ImpactView selectedRow={selectedRow} maxScore={maxScore} />
+              <ImpactView selectedRow={selectedRow} maxScore={maxScore} onBack={backFromDetails} />
             )}
             {activeView === 'archive' && (
-              <ArchiveView rows={filteredRows} maxScore={maxScore} />
+              <ArchiveView
+                rows={filteredRows}
+                maxScore={maxScore}
+                status={status}
+                hazardousOnly={hazardousOnly}
+                onViewDetails={viewDetails}
+              />
             )}
           </div>
         </div>
       </div>
+
+      <MobileBottomNav
+        active={activeTab}
+        onHome={goHome}
+        onAsteroids={goAsteroids}
+        onAlerts={goAlerts}
+        hazardousCount={hazardousRows.length}
+        onRefresh={() => attemptIngest(getStoredIngestKey())}
+        isRefreshing={status === 'ingesting'}
+        onShowTechnicalDetails={showTechnicalDetails}
+      />
 
       <Footer />
 

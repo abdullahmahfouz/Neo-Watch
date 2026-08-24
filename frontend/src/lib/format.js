@@ -34,8 +34,8 @@ export function formatDate(dateStr) {
   const date = new Date(`${dateStr}T00:00:00`)
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
+    month: 'long',
+    day: 'numeric',
   })
 }
 
@@ -43,10 +43,35 @@ export function formatImpactEnergy(mt) {
   if (mt == null || Number.isNaN(mt)) return '—'
   if (mt === 0) return '0.00'
   const magnitude = Math.abs(mt)
-  if (magnitude >= 100) return mt.toFixed(0)
+  if (magnitude >= 100) return Math.round(mt).toLocaleString('en-US')
   if (magnitude >= 1) return mt.toFixed(1)
   if (magnitude >= 0.0001) return mt.toPrecision(2)
   return mt.toExponential(1)
+}
+
+// Human-readable "20,061 Mt" instead of a bare number — used anywhere the energy
+// value is the primary thing on screen, as opposed to compact list rows where the
+// unit is already given by a nearby column header.
+export function formatImpactEnergyWithUnit(mt) {
+  const value = formatImpactEnergy(mt)
+  return value === '—' ? value : `${value} Mt`
+}
+
+// A plain-language magnitude bucket for the energy estimate, derived from the same
+// real-world reference points as formatEnergyComparison. This is a description of
+// scale, never a probability — it must not be presented as a percentage or a chance
+// of impact.
+const ENERGY_MAGNITUDE_LEVELS = [
+  { mt: 0, label: 'Low energy estimate' },
+  { mt: 0.015, label: 'Moderate energy estimate' },
+  { mt: 12, label: 'High energy estimate' },
+  { mt: 1e6, label: 'Extremely high energy estimate' },
+]
+
+export function categorizeEnergyMagnitude(mt) {
+  if (mt == null || !Number.isFinite(mt) || mt < 0) return null
+  const level = [...ENERGY_MAGNITUDE_LEVELS].reverse().find((l) => mt >= l.mt)
+  return level?.label ?? ENERGY_MAGNITUDE_LEVELS[0].label
 }
 
 // Real-world reference points for turning a raw megaton figure into something an average

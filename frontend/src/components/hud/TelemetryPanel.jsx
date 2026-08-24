@@ -36,10 +36,14 @@ export function TelemetryPanel({ rows, onLockNext }) {
   }, [rows])
 
   return (
-    <SidePanelShell title="Telemetry" onLockNext={onLockNext}>
+    <SidePanelShell
+      title="Technical Details"
+      subtitle="Aggregate stats across the current list"
+      onLockNext={onLockNext}
+    >
       {!stats && (
         <p className="px-3.5 py-6 text-center text-xs text-[var(--color-signal)]">
-          No telemetry in this window
+          No data in this window.
         </p>
       )}
       {stats && (
@@ -48,14 +52,14 @@ export function TelemetryPanel({ rows, onLockNext }) {
           <MetricStat
             size="md"
             bordered
-            label="Avg. velocity"
+            label="Average speed"
             value={stats.avgVelocity != null ? stats.avgVelocity.toFixed(1) : '—'}
             unit="km/s"
           />
           <MetricStat
             size="md"
             bordered
-            label="Velocity range"
+            label="Speed range"
             value={
               stats.minVelocity != null
                 ? `${stats.minVelocity.toFixed(1)}-${stats.maxVelocity.toFixed(1)}`
@@ -66,18 +70,18 @@ export function TelemetryPanel({ rows, onLockNext }) {
           <MetricStat
             size="md"
             bordered
-            label="Avg. distance"
+            label="Average distance"
             value={stats.avgDistance != null ? stats.avgDistance.toFixed(1) : '—'}
-            unit="LD"
+            unit="lunar distances"
           />
           <MetricStat
             size="md"
             bordered
-            label="Closest approach"
+            label="Closest approach distance"
             value={stats.closestDistance != null ? stats.closestDistance.toFixed(2) : '—'}
-            unit="LD"
+            unit="lunar distances"
           />
-          <MetricStat size="md" bordered label="Avg. diameter" value={stats.avgDiameterM} unit="m" />
+          <MetricStat size="md" bordered label="Average estimated size" value={stats.avgDiameterM} unit="m" />
         </>
       )}
     </SidePanelShell>
