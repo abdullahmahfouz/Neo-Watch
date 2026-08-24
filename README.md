@@ -6,28 +6,43 @@
 
 ![NeoWatch dashboard: a real Earth with tracked near-Earth objects orbiting it, a live threats list, and hazard alerts](docs/screenshot.png)
 
-NeoWatch pulls near-Earth object (NEO) data from NASA's public feed, stores it, estimates the impact energy of each close approach, and puts all of it on a live orbital-command dashboard — a real Earth with tracked objects rendered around it, an impact-energy trend per asteroid, and hazard alerts — so you get "what's hazardous," "what's coming up," and "how has this asteroid's estimated impact energy trended over time" without hitting NASA's API yourself or building a UI for it.
+NeoWatch pulls near-Earth object (NEO) data from NASA's public feed, stores it, estimates the impact energy of each close approach, and puts all of it on a live 3D dashboard — a photoreal Earth with tracked objects orbiting it, an impact-energy trend per asteroid, and hazard alerts — so you get "what's hazardous," "what's coming up," and "how has this asteroid's estimated impact energy trended over time" without hitting NASA's API yourself or building a UI for it.
+
+## Contents
+
+- [Features](#features)
+- [Tech stack](#tech-stack)
+- [System design](#system-design)
+  - [Data model](#data-model)
+  - [Endpoints](#endpoints)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Notes](#notes)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Features
 
 **Backend**
 - Daily ingest of NASA's NeoWs feed into Postgres (asteroids + their close approaches)
-- Impact energy estimation — kinetic energy (`E = 1/2 m v²`) in megatons of TNT equivalent, snapshotted on every ingest so you get a trend, not just a live number
+- Impact energy estimation — kinetic energy (`E = 1/2 m v²`) in megatons of TNT equivalent, snapshotted on every ingest so you get a trend, not just a live number. Returns `null` rather than a fabricated number when the underlying diameter/velocity data is missing or invalid, instead of throwing or guessing.
 - One batched `/api/neo/dashboard` endpoint that returns everything the frontend needs in a single request, plus focused per-asteroid endpoints for approach history and impact-energy history
 - Redis-cached reads, with cache invalidation tied to ingest
 - CORS lockdown, per-IP rate limiting, and an optional shared-secret gate on the ingest endpoint — all open/off by default for local dev, real once you set the matching env vars
 
 **Frontend**
-- A real orthographic projection of Earth (not a stock illustration or a WebGL globe) with tracked objects rendered as markers around it, color-coded by hazard status and selection, drag to rotate
-- Three views: **Orbit** (the globe plus a live threats list), **Impact** (one object's full approach history and impact-energy trend over time), **Archive** (a flat, sortable table of everything currently tracked)
-- **Telemetry** and **Trajectories** side panels — aggregate stats (average/min/max velocity, distance, diameter) and a chronological list of upcoming approaches
-- Hazard alerts dropdown, target lock, hazardous-only filter, one-click ingestion trigger with a session-scoped key prompt when the backend requires one
+- A real 3D Earth (Three.js/WebGL, not a static illustration or flat SVG projection) with NASA day/night/cloud/normal-map textures and a custom day-night terminator shader, tracked objects rendered as real irregular rocks orbiting it at a radius/speed derived from each one's actual miss distance and velocity, color-coded by hazard status, drag to rotate, click to select and tween the camera in
+- Three destinations — **Home** (the 3D scene plus the selected object's summary), **Asteroids** (a sortable, filterable list of everything tracked), **Alerts** (the same list, pre-filtered to hazardous objects) — plus a per-asteroid detail page with full approach history and impact-energy trend over time
+- Responsive by necessity, not an afterthought: desktop shows the full metrics card, status panel, and live Threats list alongside the globe; mobile collapses the selected object down to a single tappable summary chip so the globe stays the primary view, with navigation moved to a bottom tab bar
+- **Telemetry** side panel — aggregate stats (average/min/max velocity, distance, diameter) across the currently tracked set
+- Every asteroid shows its NASA ID and a plain-language explanation (with real-world comparisons like Hiroshima and Tunguska) of what the impact-energy number means and how it's calculated, plus an explicit energy-magnitude label (Low/Moderate/High/Extremely high) — never framed as a probability
+- Hazardous-only filter, one-click data refresh with a session-scoped key prompt when the backend requires one
 
 ## Tech stack
 
 **Backend** — Java 21, Spring Boot 4.1 (Web MVC, Data JPA, Validation, Cache, Scheduling), PostgreSQL, Redis, Lombok, Jackson 3, JUnit 5 + Mockito + MockMvc, Maven
 
-**Frontend** — React 19 + Vite, Tailwind CSS v4, Motion, Phosphor Icons — plain JavaScript, no TypeScript or router
+**Frontend** — React 19 + Vite, Three.js (the 3D scene), Tailwind CSS v4, Motion, Phosphor Icons — plain JavaScript, no TypeScript or router
 
 ## System design
 
