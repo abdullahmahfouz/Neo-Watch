@@ -104,11 +104,11 @@ export function ImpactView({ selectedRow, maxScore, onBack }) {
               )}
             </Section>
 
-            <Section title="Impact energy trend, per data refresh">
+            <Section title="Impact energy trend, per daily update">
               {status === 'loading' && <SkeletonBlock />}
               {status !== 'loading' && impactEnergyHistory.length === 0 && (
                 <p className="text-sm text-[var(--color-signal)]">
-                  No impact energy snapshots recorded yet. Refresh the data to start a trend.
+                  No impact energy snapshots recorded yet. Check back after the next daily update.
                 </p>
               )}
               {status !== 'loading' && impactEnergyHistory.length > 0 && (

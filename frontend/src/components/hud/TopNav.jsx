@@ -32,8 +32,6 @@ export function TopNav({
   onAsteroids,
   onAlerts,
   hazardousRows,
-  onRefresh,
-  refreshStatus,
   onShowTechnicalDetails,
 }) {
   const now = useClock()
@@ -100,7 +98,9 @@ export function TopNav({
           {formatTimestamp(now)}
         </time>
 
-        <div className="relative" ref={moreRef}>
+        {/* Duplicates MobileBottomNav's own "More" tab below sm — that's the
+            mobile entry point for this menu, this one is desktop-only. */}
+        <div className="relative hidden sm:block" ref={moreRef}>
           <button
             type="button"
             onClick={() => setMoreOpen((v) => !v)}
@@ -117,11 +117,6 @@ export function TopNav({
                 More
               </div>
               <MoreMenu
-                onRefresh={() => {
-                  onRefresh()
-                  setMoreOpen(false)
-                }}
-                isRefreshing={refreshStatus === 'ingesting'}
                 onShowTechnicalDetails={() => {
                   onShowTechnicalDetails()
                   setMoreOpen(false)

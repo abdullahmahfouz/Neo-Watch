@@ -1,4 +1,4 @@
-import { ArrowsClockwise, ChartLine, ListBullets } from '@phosphor-icons/react'
+import { ChartLine, ListBullets } from '@phosphor-icons/react'
 
 const NAV_LINKS = [
   { key: 'threats', label: 'Asteroids to Watch', icon: ListBullets },
@@ -9,24 +9,10 @@ const NAV_LINKS = [
 // Orbit view (switching between the watchlist and the technical-stats
 // readout), separate from primary Home/Asteroids/Alerts navigation, which
 // lives in TopNav.
-export function SideNav({ onIngest, status, activePanel, onChangePanel, panelsDisabled }) {
-  const isIngesting = status === 'ingesting'
-
+export function SideNav({ activePanel, onChangePanel, panelsDisabled }) {
   return (
-    <aside className="pointer-events-auto hidden w-[256px] shrink-0 flex-col justify-between border-r border-[var(--color-line-strong)] bg-[var(--color-panel)]/80 py-5 backdrop-blur-md lg:flex">
-      <div className="flex flex-col gap-4 px-5 pb-8">
-        <button
-          type="button"
-          onClick={onIngest}
-          disabled={isIngesting}
-          className="flex min-h-11 items-center justify-center gap-2 border border-[var(--color-amber)] bg-[var(--color-amber)] py-2.5 text-xs font-semibold text-[#241705] transition-transform active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <ArrowsClockwise size={14} weight="bold" className={isIngesting ? 'animate-spin' : ''} />
-          {isIngesting ? 'Refreshing…' : 'Refresh data'}
-        </button>
-      </div>
-
-      <nav className="flex flex-1 flex-col gap-1 px-3" aria-label="Orbit view panels">
+    <aside className="pointer-events-auto hidden w-[256px] shrink-0 flex-col border-r border-[var(--color-line-strong)] bg-[var(--color-panel)]/80 py-5 backdrop-blur-md lg:flex">
+      <nav className="flex flex-1 flex-col gap-1 px-3 pt-8" aria-label="Orbit view panels">
         {NAV_LINKS.map(({ key, label, icon: Icon }) => {
           const active = key === activePanel
           return (

@@ -18,8 +18,6 @@ export function MobileBottomNav({
   onAsteroids,
   onAlerts,
   hazardousCount,
-  onRefresh,
-  isRefreshing,
   onShowTechnicalDetails,
 }) {
   const [moreOpen, setMoreOpen] = useState(false)
@@ -61,11 +59,6 @@ export function MobileBottomNav({
             </button>
           </div>
           <MoreMenu
-            onRefresh={() => {
-              onRefresh()
-              setMoreOpen(false)
-            }}
-            isRefreshing={isRefreshing}
             onShowTechnicalDetails={() => {
               onShowTechnicalDetails()
               setMoreOpen(false)

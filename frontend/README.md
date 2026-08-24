@@ -44,9 +44,10 @@ Set it to your Spring Boot URL for local development and deployments.
 npm run dev
 ```
 
-Starts on `localhost:5173`. If the backend has `INGEST_KEY` configured, the
-"Refresh data" button will prompt for it the first time and remember it for
-the rest of that browser tab (`sessionStorage`, never baked into the build).
+Starts on `localhost:5173`. Data comes from whatever's already in the
+backend's database — there's no manual-refresh control in the UI; the
+backend's own midnight cron job (or a manual `GET /ingest` on the backend
+directly) is what pulls fresh data from NASA.
 
 ## Production build
 

@@ -1,7 +1,6 @@
 const STATUS_LABEL = {
   ready: 'Up to date',
   loading: 'Loading asteroid data…',
-  ingesting: 'Refreshing…',
   error: 'Data error',
 }
 
@@ -16,7 +15,7 @@ export function SystemStatusHud({ status }) {
           <span
             className={`size-2 rounded-full ${
               status === 'error' ? 'bg-[var(--color-signal)]' : 'bg-[var(--color-bone)]'
-            } ${status === 'loading' || status === 'ingesting' ? 'animate-pulse' : ''}`}
+            } ${status === 'loading' ? 'animate-pulse' : ''}`}
           />
           <span className="tabular text-xs tracking-[0.1em] text-[var(--color-bone)]">
             {STATUS_LABEL[status] ?? 'Unknown'}

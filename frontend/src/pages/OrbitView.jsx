@@ -12,9 +12,7 @@ import { SceneErrorBoundary } from '../three/SceneErrorBoundary'
 import { ImpactView } from './ImpactView'
 import { ArchiveView } from './ArchiveView'
 import { Footer } from '../components/Footer'
-import { IngestKeyModal } from '../components/hud/IngestKeyModal'
 import { useAsteroidData } from '../hooks/useAsteroidData'
-import { getStoredIngestKey, setStoredIngestKey } from '../lib/ingestKey'
 
 // Three.js (~600kB) is split into its own chunk so it doesn't block the
 // first paint, even though the Orbit view now needs it right away.
@@ -23,13 +21,12 @@ const SystemScene = lazy(() =>
 )
 
 export function OrbitView() {
-  const { rows, status, error, reload, runIngest } = useAsteroidData()
+  const { rows, status, error, reload } = useAsteroidData()
   const [hazardousOnly, setHazardousOnly] = useState(false)
   const [selectedId, setSelectedId] = useState(null)
   const [activeView, setActiveView] = useState('orbit')
   const [previousView, setPreviousView] = useState('orbit')
   const [rightPanel, setRightPanel] = useState('threats')
-  const [ingestKeyPrompt, setIngestKeyPrompt] = useState(null)
   const [sceneUnavailable, setSceneUnavailable] = useState(false)
 
   const filteredRows = useMemo(() => {
@@ -118,24 +115,6 @@ export function OrbitView() {
     setActiveView('orbit')
   }
 
-  // Shared by the initial "Initiate Scan" click (no key yet, tries the stored
-  // one silently) and the key-modal's submit (an explicit retry) — a 401 on
-  // the very first attempt just opens the modal, a 401 while it's already
-  // open means the key they typed was wrong.
-  async function attemptIngest(key) {
-    try {
-      await runIngest(key)
-      if (key) setStoredIngestKey(key)
-      setIngestKeyPrompt(null)
-    } catch (err) {
-      if (err?.status === 401) {
-        setIngestKeyPrompt((prev) => ({ error: prev ? 'Incorrect key.' : null }))
-      } else {
-        setIngestKeyPrompt(null)
-      }
-    }
-  }
-
   const isLoading = status === 'loading' && rows.length === 0
   const maxScore = useMemo(
     () => Math.max(...filteredRows.map((r) => r.impactEnergyMt), 0.0001),
@@ -188,15 +167,11 @@ export function OrbitView() {
             onAsteroids={goAsteroids}
             onAlerts={goAlerts}
             hazardousRows={hazardousRows}
-            onRefresh={() => attemptIngest(getStoredIngestKey())}
-            refreshStatus={status}
             onShowTechnicalDetails={showTechnicalDetails}
           />
 
           <div className="flex flex-1 flex-col overflow-y-auto pb-16 sm:pb-0 lg:flex-row lg:overflow-hidden">
             <SideNav
-              onIngest={() => attemptIngest(getStoredIngestKey())}
-              status={status}
               activePanel={rightPanel}
               onChangePanel={setRightPanel}
               panelsDisabled={activeView !== 'orbit'}
@@ -228,7 +203,7 @@ export function OrbitView() {
                   )}
 
                   {selectedRow && (
-                    <div className="relative z-20 mx-auto w-full max-w-3xl px-4">
+                    <div className="mx-auto w-full max-w-3xl px-4">
                       {/* Mobile: a one-line tappable summary so the globe stays the main
                           event. Desktop: the full metrics card, which there's room for. */}
                       <div className="lg:hidden">
@@ -301,20 +276,10 @@ export function OrbitView() {
         onAsteroids={goAsteroids}
         onAlerts={goAlerts}
         hazardousCount={hazardousRows.length}
-        onRefresh={() => attemptIngest(getStoredIngestKey())}
-        isRefreshing={status === 'ingesting'}
         onShowTechnicalDetails={showTechnicalDetails}
       />
 
       <Footer />
-
-      {ingestKeyPrompt && (
-        <IngestKeyModal
-          error={ingestKeyPrompt.error}
-          onSubmit={attemptIngest}
-          onCancel={() => setIngestKeyPrompt(null)}
-        />
-      )}
     </div>
   )
 }

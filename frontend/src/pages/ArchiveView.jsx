@@ -39,7 +39,7 @@ export function ArchiveView({ rows, maxScore, status, hazardousOnly, onViewDetai
         {!isLoading && rows.length === 0 && (
           <EmptyState
             message="No asteroids to display."
-            hint={hazardousOnly ? 'No potentially hazardous objects in the current feed.' : 'Try refreshing the data.'}
+            hint={hazardousOnly ? 'No potentially hazardous objects in the current feed.' : 'Data updates automatically once a day.'}
           />
         )}
 

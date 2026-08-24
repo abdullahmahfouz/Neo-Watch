@@ -36,27 +36,5 @@ export function useAsteroidData() {
     load()
   }, [load])
 
-  // A 401 means the backend has an ingest key configured and this request
-  // didn't supply the right one — that's not a real failure, it's a prompt
-  // for the caller to collect a key and retry, so it's rethrown rather than
-  // surfaced as a generic error banner.
-  const runIngest = useCallback(
-    async (ingestKey) => {
-      setStatus('ingesting')
-      try {
-        await api.ingest(ingestKey)
-        await load()
-      } catch (err) {
-        if (err?.status === 401) {
-          setStatus('ready')
-          throw err
-        }
-        setError(err instanceof Error ? err.message : 'Ingestion failed')
-        setStatus('error')
-      }
-    },
-    [load],
-  )
-
-  return { rows, status, error, reload: load, runIngest }
+  return { rows, status, error, reload: load }
 }

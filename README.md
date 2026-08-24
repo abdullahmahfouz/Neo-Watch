@@ -33,10 +33,10 @@ NeoWatch pulls near-Earth object (NEO) data from NASA's public feed, stores it, 
 **Frontend**
 - A real 3D Earth (Three.js/WebGL, not a static illustration or flat SVG projection) with NASA day/night/cloud/normal-map textures and a custom day-night terminator shader, tracked objects rendered as real irregular rocks orbiting it at a radius/speed derived from each one's actual miss distance and velocity, color-coded by hazard status, drag to rotate, click to select and tween the camera in
 - Three destinations — **Home** (the 3D scene plus the selected object's summary), **Asteroids** (a sortable, filterable list of everything tracked), **Alerts** (the same list, pre-filtered to hazardous objects) — plus a per-asteroid detail page with full approach history and impact-energy trend over time
-- Responsive by necessity, not an afterthought: desktop shows the full metrics card, status panel, and live Threats list alongside the globe; mobile collapses the selected object down to a single tappable summary chip so the globe stays the primary view, with navigation moved to a bottom tab bar
+- Responsive by necessity, not an afterthought: desktop shows the full metrics card, status panel, and live Threats list alongside the globe; mobile collapses the selected object down to a single tappable summary chip, swipeable (or arrow-tappable) to cycle through tracked objects without leaving Home, so the globe stays the primary view, with navigation moved to a bottom tab bar
 - **Telemetry** side panel — aggregate stats (average/min/max velocity, distance, diameter) across the currently tracked set
 - Every asteroid shows its NASA ID and a plain-language explanation (with real-world comparisons like Hiroshima and Tunguska) of what the impact-energy number means and how it's calculated, plus an explicit energy-magnitude label (Low/Moderate/High/Extremely high) — never framed as a probability
-- Hazardous-only filter, one-click data refresh with a session-scoped key prompt when the backend requires one
+- Hazardous-only filter. Data refreshes automatically once a day (see `/ingest` below) — there's no manual-refresh control in the UI, intentionally, since a visitor triggering NASA API calls on demand isn't something the app needs to expose
 
 ## Tech stack
 
@@ -103,7 +103,7 @@ GET /api/neo/* ──▶│  NeoController │──▶ AsteroidService (read me
 | `GET` | `/api/neo/{id}/history` | Full close-approach history for one asteroid |
 | `GET` | `/api/neo/{id}/impact-energy` | The single highest impact energy estimate (Mt TNT) across that asteroid's recorded approaches |
 | `GET` | `/api/neo/{id}/impact-energy-history` | Every impact energy snapshot for that asteroid, oldest first |
-| `GET` | `/ingest` | Manually triggers a NASA feed ingest (same pipeline as the midnight job). Requires `X-Ingest-Key` if `INGEST_KEY` is set. |
+| `GET` | `/ingest` | Manually triggers a NASA feed ingest (same pipeline as the midnight job). Requires `X-Ingest-Key` if `INGEST_KEY` is set. Not called from the UI — an ops/debugging hook for forcing a refresh without waiting for the cron job. |
 | `GET` | `/test-nasa` | Smoke-tests NASA connectivity — returns the raw feed JSON, unparsed |
 
 ## Installation

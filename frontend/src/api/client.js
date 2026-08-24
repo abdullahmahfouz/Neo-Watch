@@ -22,10 +22,4 @@ export const api = {
   history: (asteroidId) => request(`/api/neo/${asteroidId}/history`),
   impactEnergy: (asteroidId) => request(`/api/neo/${asteroidId}/impact-energy`),
   impactEnergyHistory: (asteroidId) => request(`/api/neo/${asteroidId}/impact-energy-history`),
-  // The backend only enforces X-Ingest-Key when INGEST_KEY is configured
-  // server-side, so this call works with no key at all in local dev.
-  ingest: (ingestKey) =>
-    request('/ingest', {
-      headers: ingestKey ? { 'X-Ingest-Key': ingestKey } : {},
-    }),
 }
