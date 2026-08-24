@@ -39,14 +39,14 @@ export function formatDate(dateStr) {
   })
 }
 
-export function formatRiskScore(score) {
-  if (score == null || Number.isNaN(score)) return '—'
-  if (score === 0) return '0.00'
-  const magnitude = Math.abs(score)
-  if (magnitude >= 100) return score.toFixed(0)
-  if (magnitude >= 1) return score.toFixed(1)
-  if (magnitude >= 0.0001) return score.toPrecision(2)
-  return score.toExponential(1)
+export function formatImpactEnergy(mt) {
+  if (mt == null || Number.isNaN(mt)) return '—'
+  if (mt === 0) return '0.00'
+  const magnitude = Math.abs(mt)
+  if (magnitude >= 100) return mt.toFixed(0)
+  if (magnitude >= 1) return mt.toFixed(1)
+  if (magnitude >= 0.0001) return mt.toPrecision(2)
+  return mt.toExponential(1)
 }
 
 export function formatDateTime(isoStr) {

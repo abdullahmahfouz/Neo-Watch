@@ -1,6 +1,6 @@
 import { SidePanelShell } from './SidePanelShell'
 import { HazardIndicator } from '../HazardIndicator'
-import { formatAsteroidName, formatRiskScore } from '../../lib/format'
+import { formatAsteroidName, formatImpactEnergy } from '../../lib/format'
 
 function SkeletonRow() {
   return (
@@ -45,7 +45,7 @@ export function ThreatsPanel({ rows, selectedId, onSelect, onLockNext, isLoading
                 </span>
               </span>
               <span className="tabular shrink-0 pl-2 text-xs text-[var(--color-amber)]">
-                {formatRiskScore(row.riskScore)}
+                {formatImpactEnergy(row.impactEnergyMt)}
               </span>
             </button>
           )

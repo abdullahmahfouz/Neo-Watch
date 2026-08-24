@@ -24,7 +24,7 @@ export function Footer() {
       <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-signal)]">
         Built by Abdullah Mahfouz
       </span>
-      <div className="flex items-center gap-5">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         {LINKS.map(({ href, label, icon: Icon }) => (
           <a
             key={href}

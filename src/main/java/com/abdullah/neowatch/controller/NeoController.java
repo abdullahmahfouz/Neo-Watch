@@ -25,8 +25,9 @@ public class NeoController {
     }
 
     // Everything the dashboard needs in one call: union of upcoming + hazardous asteroids,
-    // each joined to its next-relevant close approach and current risk score. Prefer this
-    // over upcoming()/hazardous() + a history()/risk() loop per asteroid client-side.
+    // each joined to its next-relevant close approach and current impact energy estimate.
+    // Prefer this over upcoming()/hazardous() + a history()/impactEnergy() loop per asteroid
+    // client-side.
     @GetMapping("/dashboard")
     public List<DashboardRow> dashboard() {
         return asteroidService.getDashboardRows();
@@ -47,13 +48,13 @@ public class NeoController {
         return asteroidService.getApproachHistory(id);
     }
 
-    @GetMapping("/{id}/risk")
-    public double risk(@PathVariable Long id) {
-        return asteroidService.getRiskScore(id);
+    @GetMapping("/{id}/impact-energy")
+    public double impactEnergy(@PathVariable Long id) {
+        return asteroidService.getImpactEnergyMt(id);
     }
 
-    @GetMapping("/{id}/risk-history")
-    public List<RiskSnapshot> riskHistory(@PathVariable Long id) {
-        return asteroidService.getRiskHistory(id);
+    @GetMapping("/{id}/impact-energy-history")
+    public List<RiskSnapshot> impactEnergyHistory(@PathVariable Long id) {
+        return asteroidService.getImpactEnergyHistory(id);
     }
 }

@@ -5,7 +5,7 @@ import {
   formatDate,
   formatDateTime,
   formatDistance,
-  formatRiskScore,
+  formatImpactEnergy,
   formatVelocity,
 } from '../lib/format'
 
@@ -32,10 +32,10 @@ function SkeletonBlock() {
 
 export function ImpactView({ selectedRow, maxScore }) {
   const asteroidId = selectedRow?.asteroid.id ?? null
-  const { history, riskHistory, status } = useAsteroidDetail(asteroidId)
+  const { history, impactEnergyHistory, status } = useAsteroidDetail(asteroidId)
 
   return (
-    <div className="flex-1 overflow-y-auto px-8 py-6">
+    <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-8">
       <div className="mx-auto flex max-w-[900px] flex-col gap-10">
         {!selectedRow && (
           <EmptyState message="Select a target from Threats to view impact detail" />
@@ -79,16 +79,16 @@ export function ImpactView({ selectedRow, maxScore }) {
               )}
             </Section>
 
-            <Section title="Risk trend (per ingest)">
+            <Section title="Impact energy trend (per ingest)">
               {status === 'loading' && <SkeletonBlock />}
-              {status !== 'loading' && riskHistory.length === 0 && (
+              {status !== 'loading' && impactEnergyHistory.length === 0 && (
                 <p className="text-sm text-[var(--color-signal)]">
-                  No risk snapshots recorded yet. Run another scan to start a trend.
+                  No impact energy snapshots recorded yet. Run another scan to start a trend.
                 </p>
               )}
-              {status !== 'loading' && riskHistory.length > 0 && (
+              {status !== 'loading' && impactEnergyHistory.length > 0 && (
                 <div className="border-t border-[var(--color-line)]">
-                  {riskHistory.map((snapshot) => (
+                  {impactEnergyHistory.map((snapshot) => (
                     <div
                       key={snapshot.id}
                       className="flex items-center justify-between border-b border-[var(--color-line)] py-3 text-sm"
@@ -97,7 +97,7 @@ export function ImpactView({ selectedRow, maxScore }) {
                         {formatDateTime(snapshot.calculatedAt)}
                       </span>
                       <span className="tabular text-[var(--color-amber)]">
-                        {formatRiskScore(snapshot.riskScore)}
+                        {formatImpactEnergy(snapshot.impactEnergyMt)}
                       </span>
                     </div>
                   ))}

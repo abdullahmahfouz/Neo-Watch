@@ -70,22 +70,22 @@ class NeoControllerTest {
     }
 
     @Test
-    void riskReturnsARawNumber() throws Exception {
-        when(asteroidService.getRiskScore(eq(5L))).thenReturn(12.5);
+    void impactEnergyReturnsARawNumber() throws Exception {
+        when(asteroidService.getImpactEnergyMt(eq(5L))).thenReturn(12.5);
 
-        mockMvc.perform(get("/api/neo/5/risk"))
+        mockMvc.perform(get("/api/neo/5/impact-energy"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("12.5"));
     }
 
     @Test
-    void riskHistoryDelegatesTheIdFromThePathToTheService() throws Exception {
+    void impactEnergyHistoryDelegatesTheIdFromThePathToTheService() throws Exception {
         RiskSnapshot snapshot = new RiskSnapshot();
-        snapshot.setRiskScore(3.0);
-        when(asteroidService.getRiskHistory(eq(5L))).thenReturn(List.of(snapshot));
+        snapshot.setImpactEnergyMt(3.0);
+        when(asteroidService.getImpactEnergyHistory(eq(5L))).thenReturn(List.of(snapshot));
 
-        mockMvc.perform(get("/api/neo/5/risk-history"))
+        mockMvc.perform(get("/api/neo/5/impact-energy-history"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].riskScore").value(3.0));
+                .andExpect(jsonPath("$[0].impactEnergyMt").value(3.0));
     }
 }

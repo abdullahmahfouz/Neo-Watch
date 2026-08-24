@@ -11,7 +11,7 @@ import {
 
 export function FeaturedAsteroid({ row, maxScore }) {
   if (!row) return null
-  const { asteroid, approach, riskScore } = row
+  const { asteroid, approach, impactEnergyMt } = row
 
   return (
     <section className="grid grid-cols-1 gap-8 border-t border-[var(--color-line)] pt-6 lg:grid-cols-12">
@@ -19,7 +19,7 @@ export function FeaturedAsteroid({ row, maxScore }) {
         <div className="mb-3 flex items-center gap-2">
           {asteroid.isPotentiallyHazardous && <HazardIndicator pill />}
           <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-signal)]">
-            Featured — highest tracked risk
+            Featured — highest impact energy
           </span>
         </div>
         <h2 className="mb-5 text-3xl font-semibold tracking-tight text-[var(--color-bone)]">
@@ -50,9 +50,9 @@ export function FeaturedAsteroid({ row, maxScore }) {
 
       <div className="flex flex-col justify-center lg:col-span-7 lg:pl-8">
         <span className="mb-3 text-[10px] uppercase tracking-[0.14em] text-[var(--color-signal)]">
-          Risk score
+          Impact energy (Mt)
         </span>
-        <RiskGauge score={riskScore} maxScore={maxScore} size="lg" delay={0} />
+        <RiskGauge score={impactEnergyMt} maxScore={maxScore} size="lg" delay={0} />
       </div>
     </section>
   )

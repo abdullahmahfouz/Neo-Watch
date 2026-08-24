@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   ArrowCounterClockwise,
+  ArrowsClockwise,
   Bell,
+  ChartLine,
   FunnelSimple,
   List,
+  Target,
   X,
 } from '@phosphor-icons/react'
-import { formatAsteroidName, formatRiskScore } from '../../lib/format'
+import { formatAsteroidName, formatImpactEnergy } from '../../lib/format'
 import { HazardIndicator } from '../HazardIndicator'
 
 function useClock() {
@@ -33,6 +36,11 @@ const TABS = [
   { key: 'archive', label: 'Archive' },
 ]
 
+const PANEL_LINKS = [
+  { key: 'threats', label: 'Threats', icon: Target },
+  { key: 'telemetry', label: 'Telemetry', icon: ChartLine },
+]
+
 export function TopNav({
   activeView,
   onChangeView,
@@ -41,6 +49,10 @@ export function TopNav({
   onReset,
   hazardousRows,
   onSelectAlert,
+  activePanel,
+  onChangePanel,
+  onIngest,
+  ingestStatus,
 }) {
   const now = useClock()
   const [alertsOpen, setAlertsOpen] = useState(false)
@@ -74,7 +86,7 @@ export function TopNav({
   return (
     <header className="pointer-events-auto relative flex h-16 items-center justify-between border-b border-[var(--color-line-strong)] bg-[var(--color-panel)]/80 px-4 backdrop-blur-md sm:px-8">
       <div className="flex items-center gap-3">
-        <div className="relative md:hidden" ref={menuRef}>
+        <div className="relative lg:hidden" ref={menuRef}>
           <button
             type="button"
             onClick={() => setMenuOpen((v) => !v)}
@@ -90,7 +102,7 @@ export function TopNav({
             // Threats/Telemetry panels below also create their own stacking
             // contexts (backdrop-blur), and this menu needs to reliably
             // paint above them regardless of DOM nesting.
-            <nav className="fixed left-4 top-16 z-[100] w-48 border border-[var(--color-line-strong)] bg-[var(--color-panel)]/95 backdrop-blur-md">
+            <nav className="fixed left-4 top-16 z-[100] w-56 border border-[var(--color-line-strong)] bg-[var(--color-panel)]/95 backdrop-blur-md">
               {TABS.map((tab) => {
                 const active = tab.key === activeView
                 return (
@@ -111,6 +123,49 @@ export function TopNav({
                   </button>
                 )
               })}
+
+              {activeView === 'orbit' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onIngest()
+                      setMenuOpen(false)
+                    }}
+                    disabled={ingestStatus === 'ingesting'}
+                    className="flex w-full items-center gap-2 border-b border-[var(--color-line)] px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-signal)] transition-colors last:border-b-0 hover:text-[var(--color-bone)] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <ArrowsClockwise
+                      size={13}
+                      weight="bold"
+                      className={ingestStatus === 'ingesting' ? 'animate-spin' : ''}
+                    />
+                    {ingestStatus === 'ingesting' ? 'Scanning' : 'Initiate Scan'}
+                  </button>
+
+                  {PANEL_LINKS.map(({ key, label, icon: Icon }) => {
+                    const active = key === activePanel
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => {
+                          onChangePanel(key)
+                          setMenuOpen(false)
+                        }}
+                        className={`flex w-full items-center gap-2 border-b border-[var(--color-line)] px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.1em] transition-colors last:border-b-0 ${
+                          active
+                            ? 'bg-[var(--color-amber-dim)] text-[var(--color-amber)]'
+                            : 'text-[var(--color-signal)] hover:text-[var(--color-bone)]'
+                        }`}
+                      >
+                        <Icon size={13} weight={active ? 'bold' : 'regular'} />
+                        {label}
+                      </button>
+                    )
+                  })}
+                </>
+              )}
             </nav>
           )}
         </div>
@@ -126,7 +181,7 @@ export function TopNav({
         </span>
       </div>
 
-      <nav className="hidden items-center gap-8 md:flex">
+      <nav className="hidden items-center gap-8 lg:flex">
         {TABS.map((tab) => {
           const active = tab.key === activeView
           return (
@@ -218,7 +273,7 @@ export function TopNav({
                       {formatAsteroidName(row.asteroid.name)}
                     </span>
                     <span className="tabular text-xs text-[var(--color-amber)]">
-                      {formatRiskScore(row.riskScore)}
+                      {formatImpactEnergy(row.impactEnergyMt)}
                     </span>
                   </button>
                 ))}

@@ -29,8 +29,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-// calculateRiskScore() is pure and needs no mocks; everything else touches the NASA client or a
-// repository, so those methods are exercised with Mockito mocks instead of a real Spring context.
+// calculateImpactEnergyMt() is pure and needs no mocks; everything else touches the NASA client
+// or a repository, so those methods are exercised with Mockito mocks instead of a real Spring
+// context.
 @ExtendWith(MockitoExtension.class)
 class AsteroidServiceTest {
 
@@ -48,7 +49,31 @@ class AsteroidServiceTest {
     }
 
     @Test
-    void closerAndFasterMeansHigherRisk() {
+    void biggerAndFasterMeansHigherEnergy() {
+        AsteroidService asteroidService = newService();
+
+        Asteroid small = new Asteroid();
+        small.setEstimatedDiameterMinKm(0.1);
+        small.setEstimatedDiameterMaxKm(0.1);
+        CloseApproach slow = new CloseApproach();
+        slow.setRelativeVelocityKmh(20_000.0);
+        slow.setMissDistanceKm(10_000.0);
+
+        Asteroid big = new Asteroid();
+        big.setEstimatedDiameterMinKm(1.0);
+        big.setEstimatedDiameterMaxKm(1.0);
+        CloseApproach fast = new CloseApproach();
+        fast.setRelativeVelocityKmh(50_000.0);
+        fast.setMissDistanceKm(10_000.0);
+
+        double smallSlowEnergy = asteroidService.calculateImpactEnergyMt(small, slow);
+        double bigFastEnergy = asteroidService.calculateImpactEnergyMt(big, fast);
+
+        assertTrue(bigFastEnergy > smallSlowEnergy);
+    }
+
+    @Test
+    void impactEnergyIsIndependentOfMissDistance() {
         AsteroidService asteroidService = newService();
         Asteroid asteroid = new Asteroid();
         asteroid.setEstimatedDiameterMinKm(0.2);
@@ -62,25 +87,35 @@ class AsteroidServiceTest {
         farCall.setRelativeVelocityKmh(50_000.0);
         farCall.setMissDistanceKm(1_000_000.0);
 
-        double closeRisk = asteroidService.calculateRiskScore(asteroid, closeCall);
-        double farRisk = asteroidService.calculateRiskScore(asteroid, farCall);
-
-        assertTrue(closeRisk > farRisk);
+        // Kinetic energy depends on mass and speed, not on how close this particular
+        // recorded pass happened to be
+        assertEquals(
+                asteroidService.calculateImpactEnergyMt(asteroid, closeCall),
+                asteroidService.calculateImpactEnergyMt(asteroid, farCall),
+                1e-9);
     }
 
     @Test
     void matchesTheStatedFormula() {
         AsteroidService asteroidService = newService();
         Asteroid asteroid = new Asteroid();
-        asteroid.setEstimatedDiameterMinKm(1.0);
-        asteroid.setEstimatedDiameterMaxKm(3.0); // average = 2.0
+        asteroid.setEstimatedDiameterMinKm(2.0);
+        asteroid.setEstimatedDiameterMaxKm(2.0); // average = 2.0 km
 
         CloseApproach closeApproach = new CloseApproach();
-        closeApproach.setRelativeVelocityKmh(10_000.0);
-        closeApproach.setMissDistanceKm(500.0);
+        closeApproach.setRelativeVelocityKmh(3600.0); // = 1,000 m/s
+        closeApproach.setMissDistanceKm(500.0); // irrelevant to impact energy
 
-        // (2.0 * 10_000) / 500 = 40.0
-        assertEquals(40.0, asteroidService.calculateRiskScore(asteroid, closeApproach));
+        // E = 1/2 * (density * volume) * v^2, density = 3,000 kg/m^3, radius = 1,000 m,
+        // volume = 4/3 * pi * r^3, v = 1,000 m/s, converted from J to Mt TNT
+        // (1 Mt TNT = 4.184e15 J)
+        double radiusM = 1000.0;
+        double volumeM3 = (4.0 / 3.0) * Math.PI * Math.pow(radiusM, 3);
+        double massKg = 3000.0 * volumeM3;
+        double expectedJoules = 0.5 * massKg * 1000.0 * 1000.0;
+        double expectedMt = expectedJoules / 4.184e15;
+
+        assertEquals(expectedMt, asteroidService.calculateImpactEnergyMt(asteroid, closeApproach), 0.01);
     }
 
     // Builds one fetched Asteroid (as NasaClient.fetchTodayAsteroids() would return it) with a
@@ -105,7 +140,7 @@ class AsteroidServiceTest {
     }
 
     @Test
-    void ingestInsertsNewAsteroidAndRecordsARiskSnapshot() {
+    void ingestInsertsNewAsteroidAndRecordsAnImpactEnergySnapshot() {
         AsteroidService asteroidService = newService();
         LocalDate approachDate = LocalDate.of(2026, 8, 22);
         Asteroid fetched = fetchedAsteroidWithApproach("2101955", approachDate);
@@ -124,8 +159,17 @@ class AsteroidServiceTest {
 
         ArgumentCaptor<RiskSnapshot> snapshotCaptor = ArgumentCaptor.forClass(RiskSnapshot.class);
         verify(riskSnapshotRepository).save(snapshotCaptor.capture());
-        // (avg diameter 0.3 * velocity 50_000) / distance 10_000 = 1.5
-        assertEquals(1.5, snapshotCaptor.getValue().getRiskScore(), 0.0001);
+
+        // Matches fetchedAsteroidWithApproach's diameter (avg 0.3 km) and velocity (50,000 km/h)
+        Asteroid equivalentAsteroid = new Asteroid();
+        equivalentAsteroid.setEstimatedDiameterMinKm(0.2);
+        equivalentAsteroid.setEstimatedDiameterMaxKm(0.4);
+        CloseApproach equivalentApproach = new CloseApproach();
+        equivalentApproach.setRelativeVelocityKmh(50_000.0);
+        equivalentApproach.setMissDistanceKm(10_000.0);
+        double expected = asteroidService.calculateImpactEnergyMt(equivalentAsteroid, equivalentApproach);
+
+        assertEquals(expected, snapshotCaptor.getValue().getImpactEnergyMt(), 0.0001);
     }
 
     @Test
@@ -209,41 +253,42 @@ class AsteroidServiceTest {
     }
 
     @Test
-    void getRiskScoreReturnsTheRiskiestOfMultipleApproaches() {
+    void getImpactEnergyReturnsTheHighestEnergyOfMultipleApproaches() {
         AsteroidService asteroidService = newService();
         Asteroid asteroid = new Asteroid();
         asteroid.setEstimatedDiameterMinKm(1.0);
         asteroid.setEstimatedDiameterMaxKm(1.0);
 
-        CloseApproach farApproach = new CloseApproach();
-        farApproach.setRelativeVelocityKmh(1_000.0);
-        farApproach.setMissDistanceKm(10_000.0); // risk = 0.1
+        CloseApproach slowApproach = new CloseApproach();
+        slowApproach.setRelativeVelocityKmh(1_000.0);
+        slowApproach.setMissDistanceKm(10_000.0);
 
-        CloseApproach closeApproach = new CloseApproach();
-        closeApproach.setRelativeVelocityKmh(1_000.0);
-        closeApproach.setMissDistanceKm(100.0); // risk = 10.0
+        CloseApproach fastApproach = new CloseApproach();
+        fastApproach.setRelativeVelocityKmh(5_000.0);
+        fastApproach.setMissDistanceKm(100.0);
 
         when(asteroidRepository.findById(1L)).thenReturn(Optional.of(asteroid));
-        when(closeApproachRepository.findByAsteroidId(1L)).thenReturn(List.of(farApproach, closeApproach));
+        when(closeApproachRepository.findByAsteroidId(1L)).thenReturn(List.of(slowApproach, fastApproach));
 
-        assertEquals(10.0, asteroidService.getRiskScore(1L));
+        double expected = asteroidService.calculateImpactEnergyMt(asteroid, fastApproach);
+        assertEquals(expected, asteroidService.getImpactEnergyMt(1L), 1e-9);
     }
 
     @Test
-    void getRiskScoreThrowsWhenTheAsteroidDoesNotExist() {
+    void getImpactEnergyThrowsWhenTheAsteroidDoesNotExist() {
         AsteroidService asteroidService = newService();
         when(asteroidRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(NoSuchElementException.class, () -> asteroidService.getRiskScore(99L));
+        assertThrows(NoSuchElementException.class, () -> asteroidService.getImpactEnergyMt(99L));
         verify(closeApproachRepository, never()).findByAsteroidId(anyLong());
     }
 
     @Test
-    void getRiskHistoryDelegatesToTheRepository() {
+    void getImpactEnergyHistoryDelegatesToTheRepository() {
         AsteroidService asteroidService = newService();
         List<RiskSnapshot> history = List.of(new RiskSnapshot());
         when(riskSnapshotRepository.findByAsteroidIdOrderByCalculatedAtAsc(1L)).thenReturn(history);
 
-        assertSame(history, asteroidService.getRiskHistory(1L));
+        assertSame(history, asteroidService.getImpactEnergyHistory(1L));
     }
 }

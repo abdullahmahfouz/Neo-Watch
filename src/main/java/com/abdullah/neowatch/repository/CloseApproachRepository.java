@@ -17,4 +17,10 @@ public interface CloseApproachRepository extends JpaRepository<CloseApproach, Lo
     // A given asteroid shouldn't have two recorded approaches on the same date, so
     // (asteroid, approachDate) is used as the natural key for dedup on re-ingest
     Optional<CloseApproach> findByAsteroidAndApproachDate(Asteroid asteroid, LocalDate approachDate);
+
+    // Retention: drops approaches once they fall outside the 7-day window AsteroidService
+    // keeps (see AsteroidService.pruneOldData), so the table doesn't grow unbounded across daily
+    // ingests. Must run after RiskSnapshotRepository's equivalent delete, since RiskSnapshot
+    // holds a FK to CloseApproach.
+    void deleteByApproachDateBefore(LocalDate date);
 }

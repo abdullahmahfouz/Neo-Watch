@@ -17,7 +17,7 @@ const COLUMNS = [
   { key: 'velocity', label: 'Velocity (km/s)', sortable: true },
   { key: 'distance', label: 'Distance (LD)', sortable: true },
   { key: 'approach', label: 'Approach', sortable: true },
-  { key: 'risk', label: 'Risk', sortable: true },
+  { key: 'energy', label: 'Energy (Mt)', sortable: true },
 ]
 
 const GRID_TEMPLATE = '2fr 1fr 1fr 1fr 1fr 1.4fr'
@@ -36,8 +36,8 @@ function sortValue(row, key) {
       return row.approach?.missDistanceKm ?? Infinity
     case 'approach':
       return row.approach?.approachDate ?? ''
-    case 'risk':
-      return row.riskScore
+    case 'energy':
+      return row.impactEnergyMt
     default:
       return 0
   }
@@ -45,7 +45,7 @@ function sortValue(row, key) {
 
 export function AsteroidTable({ rows, maxScore }) {
   const reduceMotion = useReducedMotion()
-  const [sort, setSort] = useState({ key: 'risk', direction: 'desc' })
+  const [sort, setSort] = useState({ key: 'energy', direction: 'desc' })
 
   const sortedRows = useMemo(() => {
     const copy = [...rows]
@@ -102,7 +102,7 @@ export function AsteroidTable({ rows, maxScore }) {
       </div>
 
       {sortedRows.map((row, i) => {
-        const { asteroid, approach, riskScore } = row
+        const { asteroid, approach, impactEnergyMt } = row
         return (
           <motion.div
             key={asteroid.id}
@@ -139,7 +139,7 @@ export function AsteroidTable({ rows, maxScore }) {
             </span>
             <div className="pr-2">
               <RiskGauge
-                score={riskScore}
+                score={impactEnergyMt}
                 maxScore={maxScore}
                 delay={reduceMotion ? 0 : Math.min(i * 0.08, 0.6)}
               />

@@ -29,6 +29,21 @@ import java.util.NoSuchElementException;
 @Service
 public class AsteroidService {
 
+    // How far back close approaches (and their risk snapshots) are kept before pruneOldData()
+    // removes them — matches the rolling window NASA's own feed returns (see
+    // NasaClient.fetchTodayFeed), so retained data never outlives what a re-ingest could recover
+    private static final int RETENTION_DAYS = 7;
+
+    // Bulk-density estimate for a stony (S-type) near-Earth asteroid, used because NASA's NeoWs
+    // feed gives diameter but not composition or mass. 3,000 kg/m^3 sits in the middle of the
+    // commonly cited 1,300-3,500 kg/m^3 range for S-type NEOs (Britt et al. 2002) — a documented
+    // assumption, not a measured value for any specific object.
+    private static final double ASSUMED_DENSITY_KG_M3 = 3000.0;
+
+    // 1 megaton of TNT = 4.184e15 J (standard conversion, also used by NASA/JPL when quoting
+    // impact energy in TNT-equivalent terms).
+    private static final double JOULES_PER_MEGATON_TNT = 4.184e15;
+
     private final NasaClient nasaClient;
     private final AsteroidRepository asteroidRepository;
     private final CloseApproachRepository closeApproachRepository;
@@ -49,8 +64,8 @@ public class AsteroidService {
     // otherwise a cached response could keep serving pre-ingest values after new data lands.
     @Scheduled(cron = "0 0 0 * * *")
     @Transactional
-    @CacheEvict(value = {"hazardousAsteroids", "upcomingAsteroids", "approachHistory", "riskScore", "riskHistory",
-            "dashboardRows"}, allEntries = true)
+    @CacheEvict(value = {"hazardousAsteroids", "upcomingAsteroids", "approachHistory", "impactEnergy",
+            "impactEnergyHistory", "dashboardRows"}, allEntries = true)
     public List<Asteroid> ingestTodayAsteroids() {
         List<Asteroid> fetchedAsteroids = nasaClient.fetchTodayAsteroids();
 
@@ -59,12 +74,31 @@ public class AsteroidService {
             Asteroid asteroid = upsertAsteroid(fetched);
             for (CloseApproach fetchedApproach : fetched.getCloseApproaches()) {
                 CloseApproach closeApproach = upsertCloseApproach(asteroid, fetchedApproach);
-                recordRiskSnapshot(asteroid, closeApproach);
+                recordImpactEnergySnapshot(asteroid, closeApproach);
             }
             savedAsteroids.add(asteroid);
         }
 
+        // Only prune once we know this ingest actually brought in fresh data — NasaClient
+        // returns an empty list (rather than throwing) for a degraded-but-200 upstream response,
+        // and pruning on top of that would erase 7-day-old history with nothing to replace it.
+        if (!savedAsteroids.isEmpty()) {
+            pruneOldData();
+        }
+
         return savedAsteroids;
+    }
+
+    // Deletes close approaches (and their risk snapshots) once they fall outside the retention
+    // window. Without this, both tables grow without bound: CloseApproach because NASA's feed
+    // silently rolls old approaches out of scope rather than telling us to delete them, and
+    // RiskSnapshot even faster since a fresh snapshot is appended on every ingest with no dedup
+    // (see recordImpactEnergySnapshot). Snapshots must be deleted first — RiskSnapshot holds the FK to
+    // CloseApproach, so deleting approaches first would fail.
+    private void pruneOldData() {
+        LocalDate cutoff = LocalDate.now().minusDays(RETENTION_DAYS);
+        riskSnapshotRepository.deleteByCloseApproach_ApproachDateBefore(cutoff);
+        closeApproachRepository.deleteByApproachDateBefore(cutoff);
     }
 
     // Find-or-create by nasaId so re-ingesting the same asteroid updates its existing row
@@ -95,12 +129,13 @@ public class AsteroidService {
     }
 
     // Unlike upsertAsteroid/upsertCloseApproach, this always inserts a new row — one snapshot
-    // per ingest is what lets getRiskHistory() show a trend over time instead of one live number
-    private void recordRiskSnapshot(Asteroid asteroid, CloseApproach closeApproach) {
+    // per ingest is what lets getImpactEnergyHistory() show a trend over time instead of one
+    // live number
+    private void recordImpactEnergySnapshot(Asteroid asteroid, CloseApproach closeApproach) {
         RiskSnapshot snapshot = new RiskSnapshot();
         snapshot.setAsteroid(asteroid);
         snapshot.setCloseApproach(closeApproach);
-        snapshot.setRiskScore(calculateRiskScore(asteroid, closeApproach));
+        snapshot.setImpactEnergyMt(calculateImpactEnergyMt(asteroid, closeApproach));
         snapshot.setCalculatedAt(LocalDateTime.now());
         riskSnapshotRepository.save(snapshot);
     }
@@ -121,45 +156,60 @@ public class AsteroidService {
         return closeApproachRepository.findByAsteroidId(asteroidId);
     }
 
-    // Risk score = average diameter x relative velocity / miss distance — bigger, faster,
-    // closer asteroids score higher. Not a real astronomical risk model, just a simple
-    // explainable placeholder.
-    public double calculateRiskScore(Asteroid asteroid, CloseApproach closeApproach) {
+    // Impact energy estimate (megatons of TNT equivalent), via the standard kinetic-energy
+    // formula E = 1/2 * m * v^2. Unlike the old diameter*velocity/distance heuristic, this uses
+    // a verified physics formula for the energy term itself — the only estimate left is mass,
+    // derived from diameter via ASSUMED_DENSITY_KG_M3 since NASA's feed gives diameter but not
+    // composition or mass. Deliberately ignores miss distance: kinetic energy is a property of
+    // the object and its speed, not of how close any one recorded pass happened to be. This is
+    // still an estimate, not a real impact probability — that would require orbit-uncertainty
+    // data (e.g. NASA/JPL's Sentry system) that NeoWs close-approach data doesn't provide.
+    public double calculateImpactEnergyMt(Asteroid asteroid, CloseApproach closeApproach) {
         double avgDiameterKm = (asteroid.getEstimatedDiameterMinKm() + asteroid.getEstimatedDiameterMaxKm()) / 2;
-        return (avgDiameterKm * closeApproach.getRelativeVelocityKmh()) / closeApproach.getMissDistanceKm();
+        double radiusM = (avgDiameterKm * 1000) / 2;
+        double volumeM3 = (4.0 / 3.0) * Math.PI * Math.pow(radiusM, 3);
+        double massKg = ASSUMED_DENSITY_KG_M3 * volumeM3;
+
+        double velocityMs = closeApproach.getRelativeVelocityKmh() * 1000 / 3600;
+        double energyJoules = 0.5 * massKg * velocityMs * velocityMs;
+
+        return energyJoules / JOULES_PER_MEGATON_TNT;
     }
 
-    // Reports the single riskiest approach on record for this asteroid, since one asteroid can
-    // have many recorded approaches with very different distances/speeds
-    @Cacheable(value = "riskScore", key = "#asteroidId")
-    public double getRiskScore(Long asteroidId) {
+    // Reports the highest-energy approach on record for this asteroid, since NASA can refine
+    // relativeVelocityKmh for the same approach between ingests, and different approaches can
+    // be recorded at different speeds
+    @Cacheable(value = "impactEnergy", key = "#asteroidId")
+    public double getImpactEnergyMt(Long asteroidId) {
         Asteroid asteroid = asteroidRepository.findById(asteroidId)
                 .orElseThrow(() -> new NoSuchElementException("Asteroid not found: " + asteroidId));
         List<CloseApproach> approaches = closeApproachRepository.findByAsteroidId(asteroidId);
 
         return approaches.stream()
-                .mapToDouble(closeApproach -> calculateRiskScore(asteroid, closeApproach))
+                .mapToDouble(closeApproach -> calculateImpactEnergyMt(asteroid, closeApproach))
                 .max()
                 .orElse(0.0);
     }
 
-    // Oldest-to-newest risk scores recorded for this asteroid across every past ingest —
-    // the trend line, as opposed to getRiskScore()'s single live "riskiest approach right now"
-    @Cacheable(value = "riskHistory", key = "#asteroidId")
-    public List<RiskSnapshot> getRiskHistory(Long asteroidId) {
+    // Oldest-to-newest impact energy estimates recorded for this asteroid across every past
+    // ingest — the trend line, as opposed to getImpactEnergyMt()'s single live "highest-energy
+    // approach right now"
+    @Cacheable(value = "impactEnergyHistory", key = "#asteroidId")
+    public List<RiskSnapshot> getImpactEnergyHistory(Long asteroidId) {
         return riskSnapshotRepository.findByAsteroidIdOrderByCalculatedAtAsc(asteroidId);
     }
 
     // Everything the dashboard needs (union of upcoming + hazardous, each joined to its
-    // next-relevant approach and current risk score) in one call, instead of the frontend
-    // making a separate history + risk request per asteroid.
+    // next-relevant approach and current impact energy estimate) in one call, instead of the
+    // frontend making a separate history + energy request per asteroid.
     //
     // Queries the repositories directly rather than calling getUpcomingAsteroids() /
-    // getHazardousAsteroids() / getApproachHistory() / getRiskScore() on `this` — self-
+    // getHazardousAsteroids() / getApproachHistory() / getImpactEnergyMt() on `this` — self-
     // invocation within the same bean bypasses Spring's proxy, so those methods'
     // @Cacheable would silently never fire if called from here. Fetching each asteroid's
     // approaches once and reusing that same list for both the next-approach pick and the
-    // risk score also avoids getRiskScore()'s redundant re-fetch of the same data.
+    // impact energy estimate also avoids getImpactEnergyMt()'s redundant re-fetch of the same
+    // data.
     @Cacheable("dashboardRows")
     public List<DashboardRow> getDashboardRows() {
         LocalDate today = LocalDate.now();
@@ -184,12 +234,12 @@ public class AsteroidService {
                             .max(Comparator.comparing(CloseApproach::getApproachDate))
                             .orElse(null));
 
-            double riskScore = approaches.stream()
-                    .mapToDouble(closeApproach -> calculateRiskScore(asteroid, closeApproach))
+            double impactEnergyMt = approaches.stream()
+                    .mapToDouble(closeApproach -> calculateImpactEnergyMt(asteroid, closeApproach))
                     .max()
                     .orElse(0.0);
 
-            rows.add(new DashboardRow(asteroid, nextApproach, riskScore));
+            rows.add(new DashboardRow(asteroid, nextApproach, impactEnergyMt));
         }
         return rows;
     }

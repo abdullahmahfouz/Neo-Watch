@@ -15,7 +15,7 @@ import {
 // old separate 3D-view page, folded into the same screen as the globe.
 export function SelectedAsteroidCard({ row, maxScore, onClose }) {
   if (!row) return null
-  const { asteroid, approach, riskScore } = row
+  const { asteroid, approach, impactEnergyMt } = row
 
   return (
     <div className="pointer-events-auto relative w-full max-w-3xl border border-[var(--color-line-strong)] bg-[var(--color-panel)]/90 p-4 backdrop-blur-md sm:p-5">
@@ -59,9 +59,9 @@ export function SelectedAsteroidCard({ row, maxScore, onClose }) {
         <MetricStat label="Orbiting body" value={approach?.orbitingBody ?? '—'} />
         <div className="col-span-2 sm:col-span-1">
           <span className="mb-1 block text-[10px] uppercase tracking-[0.14em] text-[var(--color-signal)]">
-            Risk
+            Energy (Mt)
           </span>
-          <RiskGauge score={riskScore} maxScore={maxScore} size="md" delay={0} />
+          <RiskGauge score={impactEnergyMt} maxScore={maxScore} size="md" delay={0} />
         </div>
       </div>
     </div>

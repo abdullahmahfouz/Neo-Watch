@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api/client'
 
-// calculateRiskScore (backend) divides by miss distance; a recorded approach at
-// distance 0 (bad data, not a real close approach) would otherwise hand the UI
-// Infinity, which corrupts every gauge sharing the same maxScore (ratio =
-// score / maxScore becomes NaN for the whole list, not just this row). Treat a
-// non-finite score as unknown rather than propagating it.
+// A malformed impact energy estimate (bad upstream data) would otherwise hand
+// the UI Infinity/NaN, which corrupts every gauge sharing the same maxScore
+// (ratio = score / maxScore becomes NaN for the whole list, not just this
+// row). Treat a non-finite value as unknown rather than propagating it.
 function normalizeRow(row) {
   return {
     ...row,
-    riskScore: Number.isFinite(row.riskScore) ? row.riskScore : 0,
+    impactEnergyMt: Number.isFinite(row.impactEnergyMt) ? row.impactEnergyMt : 0,
   }
 }
 
@@ -24,7 +23,7 @@ export function useAsteroidData() {
     try {
       const dashboard = await api.dashboard()
       const joined = dashboard.map(normalizeRow)
-      joined.sort((a, b) => b.riskScore - a.riskScore)
+      joined.sort((a, b) => b.impactEnergyMt - a.impactEnergyMt)
       setRows(joined)
       setStatus('ready')
     } catch (err) {

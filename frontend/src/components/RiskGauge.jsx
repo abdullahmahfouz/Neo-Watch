@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { motion, useReducedMotion, animate } from 'motion/react'
-import { formatRiskScore } from '../lib/format'
+import { formatImpactEnergy } from '../lib/format'
 
-// Bars are scaled proportionally against the highest risk score currently loaded,
-// not a fixed 0-100 ceiling — the backend's risk formula (diameter x velocity /
-// distance) has no fixed max, so a relative scale is the honest one.
+// Bars are scaled proportionally against the highest impact energy estimate
+// currently loaded, not a fixed 0-100 ceiling — the backend's kinetic-energy
+// formula (megatons of TNT equivalent) has no fixed max, so a relative scale
+// is the honest one.
 export function RiskGauge({ score, maxScore, delay = 0, size = 'md' }) {
   const reduceMotion = useReducedMotion()
   const ratio = maxScore > 0 ? Math.min(score / maxScore, 1) : 0
@@ -44,7 +45,7 @@ export function RiskGauge({ score, maxScore, delay = 0, size = 'md' }) {
           size === 'lg' ? 'text-2xl font-medium' : 'text-sm font-medium'
         }`}
       >
-        {formatRiskScore(displayScore)}
+        {formatImpactEnergy(displayScore)}
       </span>
     </div>
   )

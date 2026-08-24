@@ -1,28 +1,28 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 
-// Backs the Impact view: pulls full approach history and the risk-score
+// Backs the Impact view: pulls full approach history and the impact-energy
 // trend for one asteroid on demand. Both endpoints exist on the backend
 // (NeoController) but had no UI consumer until now.
 export function useAsteroidDetail(asteroidId) {
   const [history, setHistory] = useState([])
-  const [riskHistory, setRiskHistory] = useState([])
+  const [impactEnergyHistory, setImpactEnergyHistory] = useState([])
   const [status, setStatus] = useState('idle')
 
   useEffect(() => {
     if (asteroidId == null) {
       setHistory([])
-      setRiskHistory([])
+      setImpactEnergyHistory([])
       setStatus('idle')
       return
     }
     let cancelled = false
     setStatus('loading')
-    Promise.all([api.history(asteroidId), api.riskHistory(asteroidId)])
-      .then(([h, rh]) => {
+    Promise.all([api.history(asteroidId), api.impactEnergyHistory(asteroidId)])
+      .then(([h, eh]) => {
         if (cancelled) return
         setHistory(h)
-        setRiskHistory(rh)
+        setImpactEnergyHistory(eh)
         setStatus('ready')
       })
       .catch(() => {
@@ -33,5 +33,5 @@ export function useAsteroidDetail(asteroidId) {
     }
   }, [asteroidId])
 
-  return { history, riskHistory, status }
+  return { history, impactEnergyHistory, status }
 }

@@ -2,7 +2,7 @@ import { RiskSummaryCard } from '../components/RiskSummaryCard'
 import { FeaturedAsteroid } from '../components/FeaturedAsteroid'
 import { AsteroidTable } from '../components/AsteroidTable'
 import { EmptyState } from '../components/EmptyState'
-import { formatRiskScore } from '../lib/format'
+import { formatImpactEnergy } from '../lib/format'
 
 export function ArchiveView({ rows, maxScore }) {
   const featured = rows[0] ?? null
@@ -10,12 +10,12 @@ export function ArchiveView({ rows, maxScore }) {
   const hazardousCount = rows.filter((r) => r.asteroid.isPotentiallyHazardous).length
 
   return (
-    <div className="flex-1 overflow-y-auto px-8 py-6">
+    <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-8">
       <div className="mx-auto flex max-w-[1100px] flex-col gap-8">
         <RiskSummaryCard
           total={rows.length}
           hazardousCount={hazardousCount}
-          highestRisk={featured ? formatRiskScore(featured.riskScore) : null}
+          highestImpactEnergy={featured ? formatImpactEnergy(featured.impactEnergyMt) : null}
         />
 
         {rows.length === 0 && <EmptyState />}

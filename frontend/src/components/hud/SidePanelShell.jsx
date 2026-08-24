@@ -5,7 +5,7 @@ import { CrosshairSimple } from '@phosphor-icons/react'
 // three since it always operates on the current filtered list.
 export function SidePanelShell({ title, count, onLockNext, children }) {
   return (
-    <aside className="pointer-events-auto flex w-[320px] shrink-0 flex-col gap-4 py-6 pr-4 sm:pr-8">
+    <aside className="pointer-events-auto flex w-full shrink-0 flex-col gap-4 px-4 py-6 sm:px-8 lg:w-[320px] lg:px-0 lg:pr-8">
       <button
         type="button"
         onClick={onLockNext}
@@ -27,7 +27,7 @@ export function SidePanelShell({ title, count, onLockNext, children }) {
           )}
         </div>
 
-        <div className="max-h-[calc(100dvh-360px)] min-h-[160px] overflow-y-auto">
+        <div className="max-h-[50vh] min-h-[160px] overflow-y-auto lg:max-h-[calc(100dvh-360px)]">
           {children}
         </div>
       </div>

@@ -100,7 +100,7 @@ export function OrbitView() {
 
   const isLoading = status === 'loading' && rows.length === 0
   const maxScore = useMemo(
-    () => Math.max(...filteredRows.map((r) => r.riskScore), 0.0001),
+    () => Math.max(...filteredRows.map((r) => r.impactEnergyMt), 0.0001),
     [filteredRows],
   )
   const selectedRow = filteredRows.find((r) => r.asteroid.id === selectedId) ?? null
@@ -149,9 +149,13 @@ export function OrbitView() {
             onReset={resetFilters}
             hazardousRows={hazardousRows}
             onSelectAlert={selectFromAlert}
+            activePanel={rightPanel}
+            onChangePanel={setRightPanel}
+            onIngest={() => attemptIngest(getStoredIngestKey())}
+            ingestStatus={status}
           />
 
-          <div className="flex flex-1 overflow-hidden">
+          <div className="flex flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
             <SideNav
               onIngest={() => attemptIngest(getStoredIngestKey())}
               status={status}
@@ -162,7 +166,7 @@ export function OrbitView() {
 
             {activeView === 'orbit' && (
               <>
-                <div className="flex flex-1 flex-col justify-between overflow-hidden bg-transparent">
+                <div className="flex flex-1 flex-col justify-between bg-transparent lg:overflow-hidden">
                   <div className="flex-1" />
 
                   {status === 'error' && (
@@ -182,12 +186,7 @@ export function OrbitView() {
                   )}
 
                   {selectedRow && (
-                    // The Threats/Telemetry aside is a fixed 320px with no
-                    // responsive collapse, so below `sm` this middle column
-                    // has no real room left — hidden here rather than
-                    // rendered truncated; the Impact tab shows the same
-                    // detail at any width.
-                    <div className="mx-auto mb-4 hidden w-full max-w-3xl px-4 sm:block">
+                    <div className="mx-auto mb-4 w-full max-w-3xl px-4">
                       <SelectedAsteroidCard
                         row={selectedRow}
                         maxScore={maxScore}

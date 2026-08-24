@@ -14,14 +14,14 @@ async function request(path, options = {}) {
 
 export const api = {
   // One call for everything the dashboard needs (asteroid + next approach +
-  // risk score per row) instead of upcoming() + hazardous() + a history()/
-  // risk() round trip per asteroid.
+  // impact energy estimate per row) instead of upcoming() + hazardous() + a
+  // history()/impactEnergy() round trip per asteroid.
   dashboard: () => request('/api/neo/dashboard'),
   upcoming: () => request('/api/neo/upcoming'),
   hazardous: () => request('/api/neo/hazardous'),
   history: (asteroidId) => request(`/api/neo/${asteroidId}/history`),
-  risk: (asteroidId) => request(`/api/neo/${asteroidId}/risk`),
-  riskHistory: (asteroidId) => request(`/api/neo/${asteroidId}/risk-history`),
+  impactEnergy: (asteroidId) => request(`/api/neo/${asteroidId}/impact-energy`),
+  impactEnergyHistory: (asteroidId) => request(`/api/neo/${asteroidId}/impact-energy-history`),
   // The backend only enforces X-Ingest-Key when INGEST_KEY is configured
   // server-side, so this call works with no key at all in local dev.
   ingest: (ingestKey) =>

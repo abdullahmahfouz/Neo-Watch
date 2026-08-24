@@ -2,24 +2,24 @@
 
 **Live frontend:** https://main.d2m0an0vcg1iwk.amplifyapp.com/
 
-**Deployment:** See [frontend/README.md](frontend/README.md#deploying-to-aws-amplify) for AWS Amplify setup.
+**Deployment:** Frontend is on AWS Amplify (see [frontend/README.md](frontend/README.md#deploying-to-aws-amplify)); backend deploy steps (AWS App Runner) are in [DEPLOY.md](DEPLOY.md).
 
 ![NeoWatch dashboard: a real Earth with tracked near-Earth objects orbiting it, a live threats list, and hazard alerts](docs/screenshot.png)
 
-NeoWatch pulls near-Earth object (NEO) data from NASA's public feed, stores it, scores how risky each close approach is, and puts all of it on a live orbital-command dashboard — a real Earth with tracked objects rendered around it, a risk trend per asteroid, and hazard alerts — so you get "what's hazardous," "what's coming up," and "how has this asteroid's risk trended over time" without hitting NASA's API yourself or building a UI for it.
+NeoWatch pulls near-Earth object (NEO) data from NASA's public feed, stores it, estimates the impact energy of each close approach, and puts all of it on a live orbital-command dashboard — a real Earth with tracked objects rendered around it, an impact-energy trend per asteroid, and hazard alerts — so you get "what's hazardous," "what's coming up," and "how has this asteroid's estimated impact energy trended over time" without hitting NASA's API yourself or building a UI for it.
 
 ## Features
 
 **Backend**
 - Daily ingest of NASA's NeoWs feed into Postgres (asteroids + their close approaches)
-- Risk scoring — a simple, explainable `diameter × velocity ÷ distance` formula, snapshotted on every ingest so you get a trend, not just a live number
-- One batched `/api/neo/dashboard` endpoint that returns everything the frontend needs in a single request, plus focused per-asteroid endpoints for approach history and risk history
+- Impact energy estimation — kinetic energy (`E = 1/2 m v²`) in megatons of TNT equivalent, snapshotted on every ingest so you get a trend, not just a live number
+- One batched `/api/neo/dashboard` endpoint that returns everything the frontend needs in a single request, plus focused per-asteroid endpoints for approach history and impact-energy history
 - Redis-cached reads, with cache invalidation tied to ingest
 - CORS lockdown, per-IP rate limiting, and an optional shared-secret gate on the ingest endpoint — all open/off by default for local dev, real once you set the matching env vars
 
 **Frontend**
 - A real orthographic projection of Earth (not a stock illustration or a WebGL globe) with tracked objects rendered as markers around it, color-coded by hazard status and selection, drag to rotate
-- Three views: **Orbit** (the globe plus a live threats list), **Impact** (one object's full approach history and risk trend over time), **Archive** (a flat, sortable table of everything currently tracked)
+- Three views: **Orbit** (the globe plus a live threats list), **Impact** (one object's full approach history and impact-energy trend over time), **Archive** (a flat, sortable table of everything currently tracked)
 - **Telemetry** and **Trajectories** side panels — aggregate stats (average/min/max velocity, distance, diameter) and a chronological list of upcoming approaches
 - Hazard alerts dropdown, target lock, hazardous-only filter, one-click ingestion trigger with a session-scoped key prompt when the backend requires one
 
@@ -63,31 +63,31 @@ GET /api/neo/* ──▶│  NeoController │──▶ AsteroidService (read me
 
 1. `NasaClient.fetchTodayAsteroids()` hits NASA's `/neo/rest/v1/feed` endpoint (despite the name, it returns a rolling 7-day window) and parses the raw JSON into `Asteroid` + `CloseApproach` objects. Parsing uses Jackson's `.path()` accessor rather than `.get()`, so a field NASA omits defaults instead of blowing up the whole batch.
 2. `AsteroidService` **upserts** each asteroid (keyed on NASA's own `id`) and each close approach (keyed on `asteroid + approachDate`), so re-running ingest updates existing rows instead of duplicating them.
-3. For every close approach, `AsteroidService` computes a risk score and inserts a new `RiskSnapshot` row — unlike the asteroid/approach upserts, snapshots always insert, so the same approach re-scored on a later ingest builds up a trend line instead of overwriting the last value.
-4. Ingest evicts every read cache (`hazardousAsteroids`, `upcomingAsteroids`, `approachHistory`, `riskScore`, `riskHistory`, `dashboardRows`), since it's the only thing that ever changes the underlying data.
+3. For every close approach, `AsteroidService` computes an impact energy estimate and inserts a new `RiskSnapshot` row — unlike the asteroid/approach upserts, snapshots always insert, so the same approach re-scored on a later ingest builds up a trend line instead of overwriting the last value.
+4. Ingest evicts every read cache (`hazardousAsteroids`, `upcomingAsteroids`, `approachHistory`, `impactEnergy`, `impactEnergyHistory`, `dashboardRows`), since it's the only thing that ever changes the underlying data.
 
-**Read path** — `NeoController` exposes read-only endpoints under `/api/neo`. Each maps to an `AsteroidService` method annotated `@Cacheable`, so repeat requests are served from Redis until the next ingest evicts them. `/api/neo/dashboard` is the frontend's main entry point: it joins the upcoming/hazardous asteroid sets to each one's next approach and current risk score in a single response, instead of the frontend making one request per asteroid.
+**Read path** — `NeoController` exposes read-only endpoints under `/api/neo`. Each maps to an `AsteroidService` method annotated `@Cacheable`, so repeat requests are served from Redis until the next ingest evicts them. `/api/neo/dashboard` is the frontend's main entry point: it joins the upcoming/hazardous asteroid sets to each one's next approach and current impact energy estimate in a single response, instead of the frontend making one request per asteroid.
 
 **Security filters** — three servlet filters run in front of every request, in order: `CorsFilter` (restricts which origins may call the API), `RateLimitFilter` (120 req/min per IP on general reads, 10 req/min on `/ingest` and `/test-nasa` — the two endpoints that call the real NASA API), and `IngestKeyFilter` (requires a matching `X-Ingest-Key` header on `/ingest` if `INGEST_KEY` is configured). All three are safe no-ops until you set the corresponding environment variable.
 
-**Risk score formula** — `(avg(estimatedDiameterMin, estimatedDiameterMax) × relativeVelocityKmh) ÷ missDistanceKm`. Bigger, faster, closer asteroids score higher. It's a simple, explainable placeholder, not a real astronomical risk model.
+**Impact energy formula** — the standard kinetic-energy formula, `E = 1/2 × m × v²`, expressed in megatons of TNT equivalent. Mass is estimated from `avg(estimatedDiameterMin, estimatedDiameterMax)` assuming a 3,000 kg/m³ bulk density (a documented mid-range estimate for a stony/S-type near-Earth object — NASA's feed gives diameter, not composition or mass). It deliberately ignores miss distance: kinetic energy is a property of the object and its speed, not of how close any one recorded pass was. This is still an estimate, not a real impact probability — an actual probability would require orbit-uncertainty data (e.g. NASA/JPL's Sentry system) that NeoWs close-approach data doesn't provide. It replaced an earlier `diameter × velocity ÷ distance` placeholder that had no physical basis.
 
 ### Data model
 
 - **Asteroid** — one row per NASA object (`nasaId`, name, diameter range, hazardous flag). Not currently unique-constrained on `nasaId` at the DB level; dedup is enforced in the service layer.
 - **CloseApproach** — one row per recorded approach event (`asteroid` FK, date, miss distance, relative velocity, orbiting body).
-- **RiskSnapshot** — one row per risk calculation (`asteroid` + `closeApproach` FKs, score, timestamp) — this is what makes `/risk-history` a trend rather than a single number.
+- **RiskSnapshot** — one row per impact energy calculation (`asteroid` + `closeApproach` FKs, `impactEnergyMt`, timestamp) — this is what makes `/impact-energy-history` a trend rather than a single number.
 
 ### Endpoints
 
 | Method | Path | What it does |
 |---|---|---|
-| `GET` | `/api/neo/dashboard` | Everything the frontend needs in one call: every tracked asteroid joined to its next approach and current risk score |
+| `GET` | `/api/neo/dashboard` | Everything the frontend needs in one call: every tracked asteroid joined to its next approach and current impact energy estimate |
 | `GET` | `/api/neo/hazardous` | All asteroids NASA flagged as potentially hazardous |
 | `GET` | `/api/neo/upcoming` | Asteroids with a recorded approach in the next 7 days |
 | `GET` | `/api/neo/{id}/history` | Full close-approach history for one asteroid |
-| `GET` | `/api/neo/{id}/risk` | The single highest risk score across that asteroid's recorded approaches |
-| `GET` | `/api/neo/{id}/risk-history` | Every risk snapshot for that asteroid, oldest first |
+| `GET` | `/api/neo/{id}/impact-energy` | The single highest impact energy estimate (Mt TNT) across that asteroid's recorded approaches |
+| `GET` | `/api/neo/{id}/impact-energy-history` | Every impact energy snapshot for that asteroid, oldest first |
 | `GET` | `/ingest` | Manually triggers a NASA feed ingest (same pipeline as the midnight job). Requires `X-Ingest-Key` if `INGEST_KEY` is set. |
 | `GET` | `/test-nasa` | Smoke-tests NASA connectivity — returns the raw feed JSON, unparsed |
 
@@ -153,7 +153,7 @@ See [frontend/README.md](frontend/README.md) for deployment notes.
 $ ./mvnw test
 ```
 
-Unit tests cover the ingest/upsert logic, risk scoring, NASA feed parsing, and the controller layer (via Mockito + Spring's MockMvc slices). `NeowatchApplicationTests` does a full context load against the configured Postgres/Redis instances.
+Unit tests cover the ingest/upsert logic, impact energy estimation, NASA feed parsing, and the controller layer (via Mockito + Spring's MockMvc slices). `NeowatchApplicationTests` does a full context load against the configured Postgres/Redis instances.
 
 ## Notes
 
