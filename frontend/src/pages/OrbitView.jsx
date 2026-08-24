@@ -66,11 +66,21 @@ export function OrbitView() {
     }
   }, [filteredRows, selectedId])
 
-  function lockNext() {
+  // Shared step for both the desktop "Next asteroid" button and the mobile
+  // chip's swipe/arrow gestures — one asteroid list, one notion of "next".
+  function cycleSelection(step) {
     if (filteredRows.length === 0) return
     const idx = filteredRows.findIndex((r) => r.asteroid.id === selectedId)
-    const next = filteredRows[(idx + 1) % filteredRows.length]
-    setSelectedId(next.asteroid.id)
+    const nextIdx = (idx + step + filteredRows.length) % filteredRows.length
+    setSelectedId(filteredRows[nextIdx].asteroid.id)
+  }
+
+  function lockNext() {
+    cycleSelection(1)
+  }
+
+  function lockPrevious() {
+    cycleSelection(-1)
   }
 
   // The three primary destinations (Home / Asteroids / Alerts), reachable
@@ -225,6 +235,9 @@ export function OrbitView() {
                         <SelectedAsteroidChip
                           row={selectedRow}
                           onViewDetails={() => viewDetails(selectedRow.asteroid.id)}
+                          onNext={lockNext}
+                          onPrevious={lockPrevious}
+                          canCycle={filteredRows.length > 1}
                         />
                       </div>
                       <div className="hidden lg:block">
