@@ -30,11 +30,12 @@ Then, from this directory:
 
 ```bash
 npm install
+echo "VITE_API_BASE_URL=http://localhost:8080" > .env.local
 npm run dev
 ```
 
-Vite proxies `/api` and `/ingest` to `http://localhost:8080` in dev (see
-`vite.config.js`), so the app works with no extra configuration.
+The app calls the backend origin from `VITE_API_BASE_URL` (loaded by Vite).
+Set it to your Spring Boot URL for local development and deployments.
 
 If the backend has `INGEST_KEY` configured, the "Initiate Scan" button will
 prompt for it the first time and remember it for the rest of that browser
@@ -46,19 +47,21 @@ tab (`sessionStorage`, never baked into the build).
 npm run build
 ```
 
-For a backend on a different origin, set `VITE_API_BASE_URL` (e.g. in a
-`.env` file) to that backend's URL. Also make sure the backend's
+Set `VITE_API_BASE_URL` (e.g. in `.env.local`) to your backend origin. Also
+make sure the backend's
 `ALLOWED_ORIGINS` includes wherever this build ends up served from.
 
-## Deploying to Vercel
+## Deploying to AWS Amplify
 
-The repository root contains a `vercel.json` configured for this frontend. In
-Vercel, import the repository with `/` as the project root and add:
+Live app: https://main.d2m0an0vcg1iwk.amplifyapp.com/
+
+In AWS Amplify, connect this repository and configure the frontend build to run
+from `frontend/`. Add this environment variable in Amplify:
 
 ```text
 VITE_API_BASE_URL=https://<your-backend-origin>
 ```
 
-Vercel builds from `frontend/` and serves its `dist/` directory. The Spring Boot
-backend must remain deployed separately, and its `ALLOWED_ORIGINS` must include
-the final Vercel URL.
+Amplify should build from `frontend/` and serve its `dist/` directory. The Spring
+Boot backend remains deployed separately, and its `ALLOWED_ORIGINS` must include
+the final Amplify URL.

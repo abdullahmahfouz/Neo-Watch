@@ -1,10 +1,9 @@
-// Thin fetch wrapper over the Spring Boot backend. In dev, Vite proxies /api and
-// /ingest to localhost:8080 (see vite.config.js); in production, set
-// VITE_API_BASE_URL to the deployed backend origin.
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
+import { buildApiUrl } from './config'
+
+// Thin fetch wrapper over the Spring Boot backend using VITE_API_BASE_URL.
 
 async function request(path, options = {}) {
-  const res = await fetch(`${BASE_URL}${path}`, options)
+  const res = await fetch(buildApiUrl(path), options)
   if (!res.ok) {
     const err = new Error(`${path} failed: ${res.status} ${res.statusText}`)
     err.status = res.status

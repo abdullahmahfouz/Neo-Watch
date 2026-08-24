@@ -1,6 +1,8 @@
 # NeoWatch
 
-**Deployment:** See [frontend/README.md](frontend/README.md#deploying-to-vercel) for Vercel setup.
+**Live frontend:** https://main.d2m0an0vcg1iwk.amplifyapp.com/
+
+**Deployment:** See [frontend/README.md](frontend/README.md#deploying-to-aws-amplify) for AWS Amplify setup.
 
 ![NeoWatch dashboard: a real Earth with tracked near-Earth objects orbiting it, a live threats list, and hazard alerts](docs/screenshot.png)
 
@@ -138,10 +140,12 @@ Starts on `localhost:8080`. Hit `GET /test-nasa` first to confirm your NASA key 
 ```bash
 $ cd frontend
 $ npm install
+$ echo "VITE_API_BASE_URL=http://localhost:8080" > .env.local
 $ npm run dev
 ```
 
-Starts on `localhost:5173` and proxies API calls to the backend, so local dev needs no extra config. See [frontend/README.md](frontend/README.md) for production build and deployment notes.
+Starts on `localhost:5173` and calls the backend origin from `VITE_API_BASE_URL`.
+See [frontend/README.md](frontend/README.md) for deployment notes.
 
 ### Test
 
