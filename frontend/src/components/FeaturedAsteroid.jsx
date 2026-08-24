@@ -1,6 +1,8 @@
-import { RiskGauge } from './RiskGauge'
+import { ImpactEnergyGauge } from './ImpactEnergyGauge'
 import { HazardIndicator } from './HazardIndicator'
 import { MetricStat } from './MetricStat'
+import { InfoTooltip } from './InfoTooltip'
+import { EnergyExplainer } from './EnergyExplainer'
 import {
   formatAsteroidName,
   formatDate,
@@ -19,12 +21,15 @@ export function FeaturedAsteroid({ row, maxScore }) {
         <div className="mb-3 flex items-center gap-2">
           {asteroid.isPotentiallyHazardous && <HazardIndicator pill />}
           <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-signal)]">
-            Featured — highest impact energy
+            Featured, highest impact energy
           </span>
         </div>
-        <h2 className="mb-5 text-3xl font-semibold tracking-tight text-[var(--color-bone)]">
+        <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-bone)]">
           {formatAsteroidName(asteroid.name)}
         </h2>
+        <span className="mb-5 mt-1 block text-xs text-[var(--color-signal)]">
+          Asteroid ID · {asteroid.nasaId ?? asteroid.id}
+        </span>
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
           <MetricStat
             label="Diameter"
@@ -49,10 +54,13 @@ export function FeaturedAsteroid({ row, maxScore }) {
       </div>
 
       <div className="flex flex-col justify-center lg:col-span-7 lg:pl-8">
-        <span className="mb-3 text-[10px] uppercase tracking-[0.14em] text-[var(--color-signal)]">
+        <span className="mb-3 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.14em] text-[var(--color-signal)]">
           Impact energy (Mt)
+          <InfoTooltip title="What is impact energy?">
+            <EnergyExplainer compact />
+          </InfoTooltip>
         </span>
-        <RiskGauge score={impactEnergyMt} maxScore={maxScore} size="lg" delay={0} />
+        <ImpactEnergyGauge score={impactEnergyMt} maxScore={maxScore} size="lg" delay={0} showComparison />
       </div>
     </section>
   )

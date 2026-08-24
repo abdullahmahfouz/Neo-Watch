@@ -22,6 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 
 // Coordinates fetching the current NEO feed from NASA (NasaClient) and persisting it
 // (AsteroidRepository, CloseApproachRepository, RiskSnapshotRepository); kept thin on purpose
@@ -164,21 +165,43 @@ public class AsteroidService {
     // the object and its speed, not of how close any one recorded pass happened to be. This is
     // still an estimate, not a real impact probability — that would require orbit-uncertainty
     // data (e.g. NASA/JPL's Sentry system) that NeoWs close-approach data doesn't provide.
-    public double calculateImpactEnergyMt(Asteroid asteroid, CloseApproach closeApproach) {
-        double avgDiameterKm = (asteroid.getEstimatedDiameterMinKm() + asteroid.getEstimatedDiameterMaxKm()) / 2;
+    //
+    // Returns null (rather than throwing, or silently substituting a fabricated number) when the
+    // inputs can't support a physically meaningful answer: a missing diameter/velocity, or a
+    // negative diameter/velocity, which NASA's feed never actually sends but a hand-built
+    // Asteroid/CloseApproach (tests, future callers) could. A zero velocity is physically valid
+    // (zero relative speed means zero kinetic energy in this frame) and returns 0.0, not null.
+    public Double calculateImpactEnergyMt(Asteroid asteroid, CloseApproach closeApproach) {
+        Double diameterMinKm = asteroid.getEstimatedDiameterMinKm();
+        Double diameterMaxKm = asteroid.getEstimatedDiameterMaxKm();
+        Double velocityKmh = closeApproach.getRelativeVelocityKmh();
+
+        if (diameterMinKm == null || diameterMaxKm == null || velocityKmh == null) {
+            return null;
+        }
+        if (diameterMinKm < 0 || diameterMaxKm < 0 || velocityKmh < 0) {
+            return null;
+        }
+
+        double avgDiameterKm = (diameterMinKm + diameterMaxKm) / 2;
         double radiusM = (avgDiameterKm * 1000) / 2;
         double volumeM3 = (4.0 / 3.0) * Math.PI * Math.pow(radiusM, 3);
         double massKg = ASSUMED_DENSITY_KG_M3 * volumeM3;
 
-        double velocityMs = closeApproach.getRelativeVelocityKmh() * 1000 / 3600;
+        double velocityMs = velocityKmh * 1000 / 3600;
         double energyJoules = 0.5 * massKg * velocityMs * velocityMs;
+        double energyMt = energyJoules / JOULES_PER_MEGATON_TNT;
 
-        return energyJoules / JOULES_PER_MEGATON_TNT;
+        // Guards against NaN/Infinity ever reaching a caller (and, downstream, the frontend) —
+        // shouldn't happen for any realistic NEO, but an absurd hand-built input (e.g. a diameter
+        // near Double.MAX_VALUE) could overflow the cubic volume term.
+        return Double.isFinite(energyMt) ? energyMt : null;
     }
 
     // Reports the highest-energy approach on record for this asteroid, since NASA can refine
     // relativeVelocityKmh for the same approach between ingests, and different approaches can
-    // be recorded at different speeds
+    // be recorded at different speeds. Approaches calculateImpactEnergyMt() can't compute a
+    // value for (missing/invalid inputs) are skipped rather than crashing the whole request.
     @Cacheable(value = "impactEnergy", key = "#asteroidId")
     public double getImpactEnergyMt(Long asteroidId) {
         Asteroid asteroid = asteroidRepository.findById(asteroidId)
@@ -186,7 +209,9 @@ public class AsteroidService {
         List<CloseApproach> approaches = closeApproachRepository.findByAsteroidId(asteroidId);
 
         return approaches.stream()
-                .mapToDouble(closeApproach -> calculateImpactEnergyMt(asteroid, closeApproach))
+                .map(closeApproach -> calculateImpactEnergyMt(asteroid, closeApproach))
+                .filter(Objects::nonNull)
+                .mapToDouble(Double::doubleValue)
                 .max()
                 .orElse(0.0);
     }
@@ -235,7 +260,9 @@ public class AsteroidService {
                             .orElse(null));
 
             double impactEnergyMt = approaches.stream()
-                    .mapToDouble(closeApproach -> calculateImpactEnergyMt(asteroid, closeApproach))
+                    .map(closeApproach -> calculateImpactEnergyMt(asteroid, closeApproach))
+                    .filter(Objects::nonNull)
+                    .mapToDouble(Double::doubleValue)
                     .max()
                     .orElse(0.0);
 

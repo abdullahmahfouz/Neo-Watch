@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { CaretDown, CaretUp } from '@phosphor-icons/react'
 import { motion, useReducedMotion } from 'motion/react'
-import { RiskGauge } from './RiskGauge'
+import { ImpactEnergyGauge } from './ImpactEnergyGauge'
 import { HazardIndicator } from './HazardIndicator'
 import {
   formatAsteroidName,
@@ -118,9 +118,14 @@ export function AsteroidTable({ rows, maxScore }) {
           >
             <div className="flex items-center gap-2 pr-4">
               {asteroid.isPotentiallyHazardous && <HazardIndicator size={14} />}
-              <span className="truncate text-sm text-[var(--color-bone)]">
-                {formatAsteroidName(asteroid.name)}
-              </span>
+              <div className="min-w-0">
+                <span className="block truncate text-sm text-[var(--color-bone)]">
+                  {formatAsteroidName(asteroid.name)}
+                </span>
+                <span className="block truncate text-[11px] text-[var(--color-signal)]">
+                  ID {asteroid.nasaId ?? asteroid.id}
+                </span>
+              </div>
             </div>
             <span className="tabular text-sm text-[var(--color-bone)]">
               {formatDiameterRange(
@@ -138,7 +143,7 @@ export function AsteroidTable({ rows, maxScore }) {
               {formatDate(approach?.approachDate)}
             </span>
             <div className="pr-2">
-              <RiskGauge
+              <ImpactEnergyGauge
                 score={impactEnergyMt}
                 maxScore={maxScore}
                 delay={reduceMotion ? 0 : Math.min(i * 0.08, 0.6)}

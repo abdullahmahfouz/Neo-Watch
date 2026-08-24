@@ -19,6 +19,7 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -116,6 +117,104 @@ class AsteroidServiceTest {
         double expectedMt = expectedJoules / 4.184e15;
 
         assertEquals(expectedMt, asteroidService.calculateImpactEnergyMt(asteroid, closeApproach), 0.01);
+    }
+
+    // Physics regression test: kinetic energy is proportional to v^2, so doubling velocity with
+    // mass held constant should quadruple the energy estimate.
+    @Test
+    void doublingVelocityQuadruplesEnergy() {
+        AsteroidService asteroidService = newService();
+        Asteroid asteroid = new Asteroid();
+        asteroid.setEstimatedDiameterMinKm(0.5);
+        asteroid.setEstimatedDiameterMaxKm(0.5);
+
+        CloseApproach baseline = new CloseApproach();
+        baseline.setRelativeVelocityKmh(20_000.0);
+        CloseApproach doubledVelocity = new CloseApproach();
+        doubledVelocity.setRelativeVelocityKmh(40_000.0);
+
+        double baselineEnergy = asteroidService.calculateImpactEnergyMt(asteroid, baseline);
+        double doubledEnergy = asteroidService.calculateImpactEnergyMt(asteroid, doubledVelocity);
+
+        assertEquals(4.0, doubledEnergy / baselineEnergy, 1e-9);
+    }
+
+    // Physics regression test: mass is proportional to r^3 (and so to diameter^3), so doubling
+    // diameter with velocity held constant should scale mass by 8x, and therefore energy by 8x.
+    @Test
+    void doublingDiameterOctuplesEnergy() {
+        AsteroidService asteroidService = newService();
+        Asteroid baselineAsteroid = new Asteroid();
+        baselineAsteroid.setEstimatedDiameterMinKm(0.5);
+        baselineAsteroid.setEstimatedDiameterMaxKm(0.5);
+        Asteroid doubledDiameterAsteroid = new Asteroid();
+        doubledDiameterAsteroid.setEstimatedDiameterMinKm(1.0);
+        doubledDiameterAsteroid.setEstimatedDiameterMaxKm(1.0);
+
+        CloseApproach approach = new CloseApproach();
+        approach.setRelativeVelocityKmh(30_000.0);
+
+        double baselineEnergy = asteroidService.calculateImpactEnergyMt(baselineAsteroid, approach);
+        double doubledEnergy = asteroidService.calculateImpactEnergyMt(doubledDiameterAsteroid, approach);
+
+        assertEquals(8.0, doubledEnergy / baselineEnergy, 1e-9);
+    }
+
+    @Test
+    void zeroVelocityMeansZeroEnergyNotNull() {
+        AsteroidService asteroidService = newService();
+        Asteroid asteroid = new Asteroid();
+        asteroid.setEstimatedDiameterMinKm(0.5);
+        asteroid.setEstimatedDiameterMaxKm(0.5);
+        CloseApproach stationary = new CloseApproach();
+        stationary.setRelativeVelocityKmh(0.0);
+
+        assertEquals(0.0, asteroidService.calculateImpactEnergyMt(asteroid, stationary), 1e-12);
+    }
+
+    @Test
+    void missingDiameterReturnsNullInsteadOfThrowing() {
+        AsteroidService asteroidService = newService();
+        Asteroid asteroid = new Asteroid(); // estimatedDiameterMinKm/MaxKm left null
+        CloseApproach approach = new CloseApproach();
+        approach.setRelativeVelocityKmh(20_000.0);
+
+        assertNull(asteroidService.calculateImpactEnergyMt(asteroid, approach));
+    }
+
+    @Test
+    void missingVelocityReturnsNullInsteadOfThrowing() {
+        AsteroidService asteroidService = newService();
+        Asteroid asteroid = new Asteroid();
+        asteroid.setEstimatedDiameterMinKm(0.5);
+        asteroid.setEstimatedDiameterMaxKm(0.5);
+        CloseApproach approach = new CloseApproach(); // relativeVelocityKmh left null
+
+        assertNull(asteroidService.calculateImpactEnergyMt(asteroid, approach));
+    }
+
+    @Test
+    void negativeDiameterReturnsNull() {
+        AsteroidService asteroidService = newService();
+        Asteroid asteroid = new Asteroid();
+        asteroid.setEstimatedDiameterMinKm(-0.5);
+        asteroid.setEstimatedDiameterMaxKm(0.5);
+        CloseApproach approach = new CloseApproach();
+        approach.setRelativeVelocityKmh(20_000.0);
+
+        assertNull(asteroidService.calculateImpactEnergyMt(asteroid, approach));
+    }
+
+    @Test
+    void negativeVelocityReturnsNull() {
+        AsteroidService asteroidService = newService();
+        Asteroid asteroid = new Asteroid();
+        asteroid.setEstimatedDiameterMinKm(0.5);
+        asteroid.setEstimatedDiameterMaxKm(0.5);
+        CloseApproach approach = new CloseApproach();
+        approach.setRelativeVelocityKmh(-20_000.0);
+
+        assertNull(asteroidService.calculateImpactEnergyMt(asteroid, approach));
     }
 
     // Builds one fetched Asteroid (as NasaClient.fetchTodayAsteroids() would return it) with a
@@ -271,6 +370,24 @@ class AsteroidServiceTest {
         when(closeApproachRepository.findByAsteroidId(1L)).thenReturn(List.of(slowApproach, fastApproach));
 
         double expected = asteroidService.calculateImpactEnergyMt(asteroid, fastApproach);
+        assertEquals(expected, asteroidService.getImpactEnergyMt(1L), 1e-9);
+    }
+
+    @Test
+    void getImpactEnergySkipsApproachesThatCannotBeComputed() {
+        AsteroidService asteroidService = newService();
+        Asteroid asteroid = new Asteroid();
+        asteroid.setEstimatedDiameterMinKm(1.0);
+        asteroid.setEstimatedDiameterMaxKm(1.0);
+
+        CloseApproach missingVelocity = new CloseApproach(); // relativeVelocityKmh left null
+        CloseApproach validApproach = new CloseApproach();
+        validApproach.setRelativeVelocityKmh(5_000.0);
+
+        when(asteroidRepository.findById(1L)).thenReturn(Optional.of(asteroid));
+        when(closeApproachRepository.findByAsteroidId(1L)).thenReturn(List.of(missingVelocity, validApproach));
+
+        double expected = asteroidService.calculateImpactEnergyMt(asteroid, validApproach);
         assertEquals(expected, asteroidService.getImpactEnergyMt(1L), 1e-9);
     }
 

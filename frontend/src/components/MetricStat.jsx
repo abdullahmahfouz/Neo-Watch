@@ -1,9 +1,9 @@
-// Shared label+value stat block. Three call sites (RiskSummaryCard, FeaturedAsteroid,
+// Shared label+value stat block. Three call sites (ImpactEnergySummaryCard, FeaturedAsteroid,
 // TelemetryPanel) each had a near-identical local component with slightly different
 // sizing — this preserves each one's exact existing look via `size`, rather than forcing
 // them to a single unified style.
 const VARIANTS = {
-  // RiskSummaryCard's original "Stat"
+  // ImpactEnergySummaryCard's original "Stat"
   lg: {
     label: 'text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-signal)]',
     value: 'tabular text-2xl font-medium text-[var(--color-bone)]',

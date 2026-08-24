@@ -1,4 +1,4 @@
-import { RiskSummaryCard } from '../components/RiskSummaryCard'
+import { ImpactEnergySummaryCard } from '../components/ImpactEnergySummaryCard'
 import { FeaturedAsteroid } from '../components/FeaturedAsteroid'
 import { AsteroidTable } from '../components/AsteroidTable'
 import { EmptyState } from '../components/EmptyState'
@@ -12,7 +12,7 @@ export function ArchiveView({ rows, maxScore }) {
   return (
     <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-8">
       <div className="mx-auto flex max-w-[1100px] flex-col gap-8">
-        <RiskSummaryCard
+        <ImpactEnergySummaryCard
           total={rows.length}
           hazardousCount={hazardousCount}
           highestImpactEnergy={featured ? formatImpactEnergy(featured.impactEnergyMt) : null}

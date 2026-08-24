@@ -212,7 +212,7 @@ export function TopNav({
           }`}
         >
           <FunnelSimple size={12} weight="bold" />
-          Risk: {hazardousOnly ? `Hazardous (${hazardousCount})` : 'All'}
+          Hazard: {hazardousOnly ? `Hazardous (${hazardousCount})` : 'All'}
         </button>
 
         <time

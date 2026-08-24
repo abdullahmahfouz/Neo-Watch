@@ -7,7 +7,7 @@ const STATUS_LABEL = {
 
 export function SystemStatusHud({ status }) {
   return (
-    <div className="pointer-events-auto w-[256px] border-b border-l-2 border-r border-t border-[var(--color-amber)]/50 bg-[var(--color-panel)]/80 px-3.5 py-3 backdrop-blur-md">
+    <div className="pointer-events-auto mx-auto w-full max-w-3xl border border-l-2 border-[var(--color-amber)]/50 bg-[var(--color-panel)]/80 px-3.5 py-3 backdrop-blur-md lg:mx-0 lg:w-[256px] lg:max-w-none">
       <div className="flex items-center justify-between">
         <span className="text-[10px] font-bold tracking-[0.16em] text-[var(--color-signal)]">
           SYS_STAT

@@ -166,11 +166,15 @@ export function OrbitView() {
 
             {activeView === 'orbit' && (
               <>
-                <div className="flex flex-1 flex-col justify-between bg-transparent lg:overflow-hidden">
-                  <div className="flex-1" />
+                <div className="flex flex-1 flex-col gap-4 bg-transparent pt-4 lg:justify-between lg:overflow-hidden lg:pt-0">
+                  {/* This spacer only matters on lg+, where the 3D scene fills the screen
+                      behind an absolutely-sized column and justify-between pins the card/HUD
+                      to the bottom. On mobile the column is a normal scrolling flow instead, so
+                      an empty flex-1 here would just fight the scroll container for height. */}
+                  <div className="hidden lg:block lg:flex-1" />
 
                   {status === 'error' && (
-                    <div className="pointer-events-auto mx-auto mb-4 flex items-center gap-3 border border-[var(--color-amber)]/50 bg-[var(--color-panel)]/90 px-4 py-3 backdrop-blur-md">
+                    <div className="pointer-events-auto mx-auto flex items-center gap-3 border border-[var(--color-amber)]/50 bg-[var(--color-panel)]/90 px-4 py-3 backdrop-blur-md">
                       <WarningCircle size={16} className="text-[var(--color-amber)]" />
                       <span className="text-xs text-[var(--color-bone)]">
                         Could not reach the NeoWatch API
@@ -186,7 +190,7 @@ export function OrbitView() {
                   )}
 
                   {selectedRow && (
-                    <div className="mx-auto mb-4 w-full max-w-3xl px-4">
+                    <div className="mx-auto w-full max-w-3xl px-4">
                       <SelectedAsteroidCard
                         row={selectedRow}
                         maxScore={maxScore}
@@ -195,7 +199,9 @@ export function OrbitView() {
                     </div>
                   )}
 
-                  <SystemStatusHud status={status} />
+                  <div className="px-4 lg:px-0">
+                    <SystemStatusHud status={status} />
+                  </div>
                 </div>
 
                 {rightPanel === 'threats' && (

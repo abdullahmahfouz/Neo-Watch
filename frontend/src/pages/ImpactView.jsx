@@ -1,5 +1,6 @@
 import { FeaturedAsteroid } from '../components/FeaturedAsteroid'
 import { EmptyState } from '../components/EmptyState'
+import { EnergyExplainer } from '../components/EnergyExplainer'
 import { useAsteroidDetail } from '../hooks/useAsteroidDetail'
 import {
   formatDate,
@@ -44,6 +45,12 @@ export function ImpactView({ selectedRow, maxScore }) {
         {selectedRow && (
           <>
             <FeaturedAsteroid row={selectedRow} maxScore={maxScore} />
+
+            <Section title="About this estimate">
+              <div className="border border-[var(--color-line)] bg-[var(--color-panel)]/60 p-4 text-sm leading-relaxed text-[var(--color-signal)]">
+                <EnergyExplainer />
+              </div>
+            </Section>
 
             <Section title="Approach history">
               {status === 'loading' && <SkeletonBlock />}

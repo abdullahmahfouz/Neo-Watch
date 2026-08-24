@@ -49,6 +49,23 @@ export function formatImpactEnergy(mt) {
   return mt.toExponential(1)
 }
 
+// Real-world reference points for turning a raw megaton figure into something an average
+// person can picture. Ordered smallest first; formatEnergyComparison picks the largest one
+// the given value still exceeds, so a value below all of them still compares against Hiroshima.
+const ENERGY_REFERENCES = [
+  { mt: 0.015, label: 'the Hiroshima bomb' },
+  { mt: 12, label: 'the 1908 Tunguska explosion' },
+  { mt: 1e8, label: 'the asteroid impact that ended the age of dinosaurs' },
+]
+
+export function formatEnergyComparison(mt) {
+  if (mt == null || !Number.isFinite(mt) || mt <= 0) return null
+  const reference = [...ENERGY_REFERENCES].reverse().find((ref) => mt >= ref.mt) ?? ENERGY_REFERENCES[0]
+  const ratio = mt / reference.mt
+  const ratioStr = ratio >= 10 ? Math.round(ratio).toLocaleString('en-US') : ratio.toFixed(ratio < 1 ? 2 : 1)
+  return `About ${ratioStr}x ${reference.label}`
+}
+
 export function formatDateTime(isoStr) {
   if (!isoStr) return '—'
   const date = new Date(isoStr)
