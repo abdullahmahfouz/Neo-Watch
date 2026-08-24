@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { WarningCircle } from '@phosphor-icons/react'
+import { Target, WarningCircle } from '@phosphor-icons/react'
 import { TopNav } from '../components/hud/TopNav'
 import { SideNav } from '../components/hud/SideNav'
 import { MobileBottomNav } from '../components/hud/MobileBottomNav'
@@ -180,6 +180,17 @@ export function OrbitView() {
             {activeView === 'orbit' && (
               <>
                 <div className="flex flex-1 flex-col gap-4 bg-transparent pt-4 lg:justify-between lg:overflow-hidden lg:pt-0">
+                  {!sceneUnavailable && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(null)}
+                      className="pointer-events-auto mx-4 flex min-h-9 w-fit items-center gap-1.5 self-start border border-[var(--color-line-strong)] bg-[var(--color-panel)]/90 px-3 text-xs font-semibold text-[var(--color-bone)] backdrop-blur-md transition-colors hover:border-[var(--color-amber)] hover:text-[var(--color-amber)]"
+                    >
+                      <Target size={13} weight="bold" />
+                      Back to Earth
+                    </button>
+                  )}
+
                   {/* This spacer only matters on lg+, where the 3D scene fills the screen
                       behind an absolutely-sized column and justify-between pins the card/HUD
                       to the bottom. On mobile the column is a normal scrolling flow instead, so

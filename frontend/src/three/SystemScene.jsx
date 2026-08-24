@@ -26,7 +26,6 @@ const HAZARD_COLOR = '#e8a33d'
 const ROCK_COLOR = '#8a7864' // matte warm gray/brown rock tone
 const SUN_COLOR = '#ffcf87'
 const SUN_DIRECTION = new THREE.Vector3(0.55, 0.35, 0.65).normalize()
-const MAX_MARKERS = 40
 const CLICK_DRAG_THRESHOLD = 6 // px — pointerdown/up further apart than this counts as a drag, not a click
 
 const EARTH_ROTATION_SPEED = (2 * Math.PI) / 60 // ~60s per revolution
@@ -330,7 +329,10 @@ export function SystemScene({ rows, selectedId, onSelect, onUnavailable }) {
         hoveredId = null
         clearGroup(hoverGroup)
       }
-      for (const row of rowsRef.current.slice(0, MAX_MARKERS)) {
+      // Every tracked row gets a marker — dropping the tail past some cap
+      // would silently make "most hazardous / highest-energy" asteroids the
+      // only ones a user could ever see or select in the 3D view.
+      for (const row of rowsRef.current) {
         const seed = hashSeed(row.asteroid.id)
         const rand = mulberry32(seed)
         const approach = row.approach
